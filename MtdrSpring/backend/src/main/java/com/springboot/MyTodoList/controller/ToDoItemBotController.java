@@ -6,9 +6,7 @@ import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.util.BotActions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.BotSession;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.longpolling.starter.AfterBotRegistration;
@@ -21,31 +19,22 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 public class ToDoItemBotController  implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 
 	private static final Logger logger = LoggerFactory.getLogger(ToDoItemBotController.class);
-	private ToDoItemService toDoItemService;
-	private DeepSeekService deepSeekService;
+	private final ToDoItemService toDoItemService;
+	private final DeepSeekService deepSeekService;
 	private final TelegramClient telegramClient;
-	
 	private final BotProps botProps;
-
-	@Value("${telegram.bot.token}")
-	private String telegramBotToken;
-
 
 	@Override
     public String getBotToken() {
-		if(telegramBotToken != null && !telegramBotToken.trim().isEmpty()){
-        	return telegramBotToken;
-		}else{
-			return botProps.getToken();
-		}
+		return botProps.getToken();
     }
 
 
-	public ToDoItemBotController( BotProps bp, ToDoItemService tsvc, DeepSeekService ds) {
+	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, TelegramClient telegramClient) {
 		this.botProps = bp;
-		telegramClient = new OkHttpTelegramClient(getBotToken());
-		toDoItemService = tsvc;
-		deepSeekService = ds;
+		this.telegramClient = telegramClient;
+		this.toDoItemService = tsvc;
+		this.deepSeekService = ds;
 	}
 
 	@Override
@@ -90,5 +79,4 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 }
-
 
