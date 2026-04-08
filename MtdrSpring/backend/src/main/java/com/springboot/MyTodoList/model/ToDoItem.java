@@ -19,6 +19,7 @@ public class ToDoItem {
     @Column(name = "CREATION_TS")
     OffsetDateTime creation_ts;
     @Column(name = "done")
+    
     boolean done;
     public ToDoItem(){
 
