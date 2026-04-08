@@ -48,4 +48,11 @@ frontend/package-lock.json
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
+
+# Modifiable Locally
 /MtdrSpring/backend/wallet
+/MtdrSpring/backend/DockerfileDev
+
+/MtdrSpring/backend/src/main/resources
+MtdrSpring/backend/src/main/resources/application.properties
+MtdrSpring/backend/src/main/resources/todolistapp-springboot.yaml
