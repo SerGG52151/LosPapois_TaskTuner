@@ -8,9 +8,7 @@
         "@mui/icons-material": "^5.8.0",
         "@mui/material": "^5.8.0",
         "@mui/styles": "^5.7.0",
-        "autoprefixer": "^10.4.27",
         "moment": "^2.29.3",
-        "postcss": "^8.5.9",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",
         "react-moment": "^1.1.2",
@@ -19,11 +17,7 @@
         "typescript": "^4.6.4"
     },
     "scripts": {
-        "tw:build": "tailwindcss -i ./src/tailwind-input.css -o ./src/tailwind.css --minify",
-        "tw:watch": "tailwindcss -i ./src/tailwind-input.css -o ./src/tailwind.css --watch",
-        "prestart": "npm run tw:build",
         "start": "react-scripts start",
-        "prebuild": "npm run tw:build",
         "build": "react-scripts build"
     },
     "eslintConfig": {
