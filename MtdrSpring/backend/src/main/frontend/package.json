@@ -25,5 +25,10 @@
     "browserslist": [
         "last 5 versions"
     ],
-    "homepage": "."
+    "homepage": ".",
+    "devDependencies": {
+        "autoprefixer": "^10.4.27",
+        "postcss": "^8.5.9",
+        "tailwindcss": "^4.2.2"
+    }
 }
