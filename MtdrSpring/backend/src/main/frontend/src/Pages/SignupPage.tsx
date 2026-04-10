@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 const SignupPage: React.FC = () => {
+    const navigate = useNavigate();
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
@@ -16,6 +17,7 @@ const SignupPage: React.FC = () => {
         e.preventDefault();
         console.log('Signup Attempt:', { firstName, lastName, email, password });
         alert('Signup completed successfully! Please log in now.');
+        navigate("/login"); // Simulate successful signup by redirecting to login page
     };
 
     return (
