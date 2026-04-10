@@ -19,7 +19,7 @@ export default function LoginPage(): JSX.Element {
       <div className="w-full max-w-md bg-white rounded-lg shadow-md border border-gray-200">
         <div className="p-6">
           <div className="text-center mb-4">
-            <h2 className="text-2xl font-semibold">Sign in</h2>
+            <h2 className="text-2xl font-semibold">Sign In</h2>
             <p className="text-sm text-gray-500">Enter your account details</p>
           </div>
 
