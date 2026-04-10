@@ -1,24 +1,29 @@
 import React from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import TasksPage from './Pages/TasksPage';
 import LoginPage from './Pages/LoginPage';
 import SignupPage from './Pages/SignupPage'; 
 import TailwindTestPage from './Pages/TailwindTestPage';
+import Navigation from './Components/Navigation';
 
 function App() {
+  const location = useLocation();
+  const showNavigation = location.pathname !== '/login' && location.pathname !== '/signup';
+
   return (
     <div>
-      <nav style={{ padding: '0.5rem' }}>
-        <Link to="/login">Home</Link> {' | '}
-        <Link to="/tasks">Tasks</Link> {' | '}
-        <Link to="/signup">Signup</Link> {' | '}
-        <Link to="/tailwind-test" className="text-blue-500 hover:text-blue-700 font-semibold underline">Tailwind Test</Link>
-      </nav>
+      {showNavigation && <Navigation />}
       <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage/>} />
+        <Route path="/signup" element={<Navigate to="/login" replace />} />
+        <Route path="/dashboard" element={<Navigate to="/tasks" replace />} />
+        <Route path="/team" element={<Navigate to="/tasks" replace />} />
+        <Route path="/projects" element={<Navigate to="/tasks" replace />} />
         <Route path="/tasks" element={<TasksPage/>} />
         <Route path="/signup" element={<SignupPage/>} />
         <Route path="/tailwind-test" element={<TailwindTestPage/>} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>
   );

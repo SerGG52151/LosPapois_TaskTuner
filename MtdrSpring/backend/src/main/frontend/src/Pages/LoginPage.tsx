@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 export default function LoginPage(): JSX.Element {
+  const navigate = useNavigate();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
 
@@ -9,11 +10,12 @@ export default function LoginPage(): JSX.Element {
     e.preventDefault();
     // Frontend-only: backend login will be implemented later.
     console.log('login attempt', { email, password });
-    alert('Login submitted (frontend only)');
+    //alert('Login submitted (frontend only), redirecting...');
+    navigate("/tasks"); // Simulate successful login by redirecting to dashboard
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-white p-4">
       <div className="w-full max-w-md bg-white rounded-lg shadow-md border border-gray-200">
         <div className="p-6">
           <div className="text-center mb-4">
@@ -29,7 +31,7 @@ export default function LoginPage(): JSX.Element {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                 autoComplete="email"
               />
             </div>
@@ -41,7 +43,7 @@ export default function LoginPage(): JSX.Element {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
                 autoComplete="current-password"
               />
             </div>
@@ -49,7 +51,7 @@ export default function LoginPage(): JSX.Element {
             <div>
               <button
                 type="submit"
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-md font-medium"
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-medium"
               >
                 Log in
               </button>
@@ -58,7 +60,7 @@ export default function LoginPage(): JSX.Element {
 
           <div className="mt-4 text-center text-sm text-gray-600">
             Don't have an account?&nbsp;
-            <RouterLink to="/signup" className="text-indigo-600 hover:underline">Create one</RouterLink>
+            <RouterLink to="/signup" className="text-red-600 hover:underline">Create one</RouterLink>
           </div>
         </div>
       </div>
