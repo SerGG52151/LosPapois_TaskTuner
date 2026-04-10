@@ -7,7 +7,7 @@ public enum BotCommands {
 	START_COMMAND("/start"), 
 	HIDE_COMMAND("/hide"), 
 	TODO_LIST("/todolist"),
-	ADD_ITEM("/additem"),
+	ADD_ITEM("/addtask"),
 	STATUS("/status"),
 	MARK_DONE("/done"),
 	MARK_REWORK("/rework"),

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
 public class BotHelper {
@@ -52,6 +53,20 @@ public class BotHelper {
 		} catch (Exception e) {
 			logger.error(e.getLocalizedMessage(), e);
 		}
+	}
+
+	// Para enviar mensajes con botones
+	public static void sendMessageToTelegramButtons(Long chatId, String text, TelegramClient bot, InlineKeyboardMarkup ik) {
+    try {
+        SendMessage messageToTelegram = SendMessage.builder()
+            .chatId(chatId)
+            .text(text)
+            .replyMarkup(ik)
+            .build();
+        bot.execute(messageToTelegram);
+    } catch (Exception e) {
+        logger.error(e.getLocalizedMessage(), e);
+    }
 	}
 
 }
