@@ -15,4 +15,3 @@ ENV dbpassword="None00010001"
 ENV db_url="jdbc:oracle:thin:@tasktuner_medium?TNS_ADMIN=/mtdrworkshop/creds"
 ENV driver_class_name="oracle.jdbc.OracleDriver"
 
-ENTRYPOINT ["java","-jar","MyTodoList.jar"]
