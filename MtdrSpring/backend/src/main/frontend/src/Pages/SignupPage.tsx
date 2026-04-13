@@ -3,9 +3,9 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 const SignupPage: React.FC = () => {
     const navigate = useNavigate();
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
+    const [telegramId, setTelegramId] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
 
@@ -15,7 +15,7 @@ const SignupPage: React.FC = () => {
 
     const handleSignup = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Signup Attempt:', { firstName, lastName, email, password });
+        console.log('Signup Attempt:', { username, email, telegramId, password });
         alert('Signup completed successfully! Please log in now.');
         navigate("/login"); // Simulate successful signup by redirecting to login page
     };
@@ -31,32 +31,17 @@ const SignupPage: React.FC = () => {
 
                     <form onSubmit={handleSignup} className="space-y-4">
                         <div>
-                            <label htmlFor="signup-firstname" className="block text-sm font-medium text-gray-700 mb-1">
-                                First name
+                            <label htmlFor="signup-username" className="block text-sm font-medium text-gray-700 mb-1">
+                                Username
                             </label>
                             <input
                                 type="text"
-                                id="signup-firstname"
+                                id="signup-username"
                                 required
-                                value={firstName}
-                                onChange={(e) => setFirstName(e.target.value)}
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                autoComplete="given-name"
-                            />
-                        </div>
-
-                        <div>
-                            <label htmlFor="signup-lastname" className="block text-sm font-medium text-gray-700 mb-1">
-                                Last name
-                            </label>
-                            <input
-                                type="text"
-                                id="signup-lastname"
-                                required
-                                value={lastName}
-                                onChange={(e) => setLastName(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                autoComplete="family-name"
+                                autoComplete="username"
                             />
                         </div>
 
@@ -72,6 +57,21 @@ const SignupPage: React.FC = () => {
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 autoComplete="email"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="signup-telegram" className="block text-sm font-medium text-gray-700 mb-1">
+                                Telegram ID
+                            </label>
+                            <input
+                                type="text"
+                                id="signup-telegram"
+                                required
+                                value={telegramId}
+                                onChange={(e) => setTelegramId(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                autoComplete="off"
                             />
                         </div>
 
