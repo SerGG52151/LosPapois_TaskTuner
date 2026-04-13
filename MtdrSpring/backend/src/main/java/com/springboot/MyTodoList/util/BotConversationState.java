@@ -14,8 +14,5 @@ public enum BotConversationState {
     WAITING_REGISTER_EMAIL,
     WAITING_REGISTER_PASSWORD,
     WAITING_REGISTER_PASSWORD_CONFIRM,
-    // Flujo de inicio de sesión
-    WAITING_LOGIN_EMAIL,
-    WAITING_LOGIN_PASSWORD
 
 }

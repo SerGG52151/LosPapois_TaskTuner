@@ -42,8 +42,6 @@ public class BotActions {
     private static final Map<Long, BotConversationState> chatStates = new ConcurrentHashMap<>();
     // Para el registro
     private static final Map<Long, BotRegistrationDraft> registrationDrafts = new ConcurrentHashMap<>();
-    // Para el login
-    private static final Map<Long, BotLoginDraft> loginDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, BotTaskDraft> taskDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, UserTT> authenticatedUsers = new ConcurrentHashMap<>();
 
@@ -104,7 +102,6 @@ public class BotActions {
         setCurrentState(BotConversationState.NONE);
         registrationDrafts.remove(chatId);
         taskDrafts.remove(chatId);
-        loginDrafts.remove(chatId);
     }
 
     private boolean isValidEmail(String email) {
@@ -291,10 +288,18 @@ public class BotActions {
             return;
         }
 
-        logger.info("Login iniciado para chatId: {}", chatId);
-        loginDrafts.put(chatId, new BotLoginDraft());
-        setCurrentState(BotConversationState.WAITING_LOGIN_EMAIL);
-        BotHelper.sendMessageToTelegram(chatId, "📧 Ingresa tu email:", telegramClient, null);
+        logger.info("Login iniciado para chatId: {} identity: {}", chatId, telegramIdentity);
+
+        Optional<UserTT> userOp = userTTService.getUserByTelegram(telegramIdentity);
+        if (!userOp.isPresent()) {
+            BotHelper.sendMessageToTelegram(chatId,
+                "No tienes una cuenta registrada. Usa /register para crear una.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        authenticatedUsers.put(chatId, userOp.get());
+        showMainMenu();
         exit = true;
     }
 
@@ -327,8 +332,6 @@ public class BotActions {
         if (state == BotConversationState.NONE) return;
 
         switch (state) {
-            case WAITING_LOGIN_EMAIL:              handleLoginEmail();             break;
-            case WAITING_LOGIN_PASSWORD:           handleLoginPassword();          break;
             case WAITING_REGISTER_NAME:            handleRegisterName();           break;
             case WAITING_REGISTER_EMAIL:           handleRegisterEmail();          break;
             case WAITING_REGISTER_PASSWORD:        handleRegisterPassword();       break;
@@ -417,55 +420,6 @@ public class BotActions {
 
         clearConversationState();
         BotHelper.sendMessageToTelegram(chatId, BotMessages.REGISTER_COMPLETED.getMessage(), telegramClient, null);
-        exit = true;
-    }
-
-    private void handleLoginEmail(){
-        if(!isValidEmail(requestText)){
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_EMAIL.getMessage(), telegramClient, null);
-            exit = true;
-            return;
-        }
-
-        BotLoginDraft draft = loginDrafts.computeIfAbsent(chatId, k -> new BotLoginDraft());
-        draft.setEmail(requestText.trim());
-        setCurrentState(BotConversationState.WAITING_LOGIN_PASSWORD);
-        BotHelper.sendMessageToTelegram(chatId, "Ingresa tu contraseña:", telegramClient, null);
-        exit = true;
-    }
-
-    private void handleLoginPassword(){
-        BotLoginDraft draft = loginDrafts.get(chatId);
-        if( draft == null ){
-            clearConversationState();
-            BotHelper.sendMessageToTelegram(chatId, "Error en login, intenta /login de nuevo", telegramClient, null);
-            exit = true;
-            return;
-        }
-
-        // Buscar el usuario
-
-        Optional<UserTT> userOp = userTTService.getUserByEmail(draft.getEmail());
-        if(!userOp.isPresent()){
-            BotHelper.sendMessageToTelegram(chatId, "Email no registrado.", telegramClient, null);
-            clearConversationState();
-            exit = true;
-            return;
-        }
-        
-        UserTT user = userOp.get();
-        if(!user.getPassword().equals(requestText.trim())){
-            BotHelper.sendMessageToTelegram(chatId, "Contraseña incorrecta, intenta de nuevo.", telegramClient, null);
-            draft.setPassword(null);
-            setCurrentState(BotConversationState.WAITING_LOGIN_PASSWORD);
-            exit = true;
-            return;
-        }
-
-        authenticatedUsers.put(chatId, user);
-        clearConversationState();
-        loginDrafts.remove(chatId);
-        showMainMenu();
         exit = true;
     }
 
