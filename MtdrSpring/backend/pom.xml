@@ -33,7 +33,7 @@
 		<dependency>
 			<groupId>org.hibernate.orm</groupId>
 			<artifactId>hibernate-community-dialects</artifactId>
-			<version>6.6.22.Final</version>
+			<version>6.6.29.Final</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springdoc</groupId>
