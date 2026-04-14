@@ -15,6 +15,7 @@
 *.zip
 *.tar.gz
 *.rar
+.claude
 backend/target/*
 backend/.settings/*
 backend/.project
