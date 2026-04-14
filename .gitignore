@@ -40,7 +40,8 @@ yarn-error.log*
 .vscode/
 
 # Modifiable locally
-/MtdrSpring/backend/src/main/resources/wallet
+/MtdrSpring/backend/wallet
+/MtdrSpring/backend/DockerfileDev
 /MtdrSpring/backend/src/main/resources/application.properties
 /MtdrSpring/backend/src/main/resources/todolistapp-springboot.yaml
 /MtdrSpring/backend/logs.log*
