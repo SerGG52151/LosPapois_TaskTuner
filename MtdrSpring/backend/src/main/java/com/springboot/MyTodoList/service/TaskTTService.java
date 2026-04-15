@@ -85,6 +85,14 @@ public class TaskTTService {
     }
 
     /**
+     * Returns tasks assigned to a user that belong to an active sprint.
+     * Used by the bot to show only current-sprint work.
+     */
+    public List<TaskTT> getTasksByUserInActiveSprint(long userId) {
+        return taskTTRepository.findByUserIdInActiveSprint(userId);
+    }
+
+    /**
      * Returns all tasks within a specific project (the project backlog).
      *
      * @param pjId  the project whose backlog to load

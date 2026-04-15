@@ -82,6 +82,23 @@ public interface TaskTTRepository extends JpaRepository<TaskTT, Long> {
      *
      * Used by SprintTTService.getSprintMetrics().
      */
+    /*
+     * Tasks assigned to a user that belong to an active sprint.
+     *
+     * Equivalent SQL:
+     *   SELECT t.* FROM task_tt t
+     *   JOIN sprint_task_tt st ON st.task_id = t.task_id
+     *   JOIN sprint_tt s       ON s.spr_id   = st.spr_id
+     *   WHERE t.user_id = ? AND s.state_sprint = 'active'
+     *
+     * Use case: bot "my tasks" view — shows only current sprint work.
+     */
+    @Query("SELECT t FROM TaskTT t " +
+           "JOIN SprintTaskTT st ON st.id.taskId = t.taskId " +
+           "JOIN SprintTT s ON s.sprId = st.id.sprId " +
+           "WHERE t.userId = :userId AND s.stateSprint = 'active'")
+    List<TaskTT> findByUserIdInActiveSprint(@Param("userId") long userId);
+
     @Query("SELECT COALESCE(SUM(t.storyPoints), 0) " +
            "FROM TaskTT t " +
            "JOIN SprintTaskTT st ON st.id.taskId = t.taskId " +
