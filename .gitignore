@@ -44,5 +44,6 @@ yarn-error.log*
 /MtdrSpring/backend/DockerfileDev
 /MtdrSpring/backend/src/main/resources/application.properties
 /MtdrSpring/backend/src/main/resources/todolistapp-springboot.yaml
+/MtdrSpring/backend/Dockerfile
 /MtdrSpring/backend/logs.log*
 /MtdrSpring/setup-local.sh
