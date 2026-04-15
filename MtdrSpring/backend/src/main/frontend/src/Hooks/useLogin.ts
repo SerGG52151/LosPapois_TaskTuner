@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_CONFIG } from '../config';
 
 interface LoginCredentials {
   mail: string;
@@ -23,7 +24,7 @@ export default function useLogin(): UseLoginReturn {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8080/auth/login', {
+      const response = await fetch(API_CONFIG.auth.login, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
