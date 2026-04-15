@@ -1,5 +1,21 @@
 package com.springboot.MyTodoList.util;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
+import org.telegram.telegrambots.meta.generics.TelegramClient;
+
 import com.springboot.MyTodoList.model.ProjectTT;
 import com.springboot.MyTodoList.model.SprintTT;
 import com.springboot.MyTodoList.model.TaskTT;
@@ -7,31 +23,11 @@ import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.UserTT;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.ProjectTTService;
-import com.springboot.MyTodoList.service.SprintTaskTTService;
 import com.springboot.MyTodoList.service.SprintTTService;
+import com.springboot.MyTodoList.service.SprintTaskTTService;
 import com.springboot.MyTodoList.service.TaskTTService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.service.UserTTService;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-
-import org.apache.catalina.realm.AuthenticatedUserRealm;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 public class BotActions {
 
@@ -42,8 +38,6 @@ public class BotActions {
     private static final Map<Long, BotConversationState> chatStates = new ConcurrentHashMap<>();
     // Para el registro
     private static final Map<Long, BotRegistrationDraft> registrationDrafts = new ConcurrentHashMap<>();
-    // Para el login
-    private static final Map<Long, BotLoginDraft> loginDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, BotTaskDraft> taskDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, UserTT> authenticatedUsers = new ConcurrentHashMap<>();
 
@@ -104,7 +98,6 @@ public class BotActions {
         setCurrentState(BotConversationState.NONE);
         registrationDrafts.remove(chatId);
         taskDrafts.remove(chatId);
-        loginDrafts.remove(chatId);
     }
 
     private boolean isValidEmail(String email) {
@@ -291,10 +284,19 @@ public class BotActions {
             return;
         }
 
-        logger.info("Login iniciado para chatId: {}", chatId);
-        loginDrafts.put(chatId, new BotLoginDraft());
-        setCurrentState(BotConversationState.WAITING_LOGIN_EMAIL);
-        BotHelper.sendMessageToTelegram(chatId, "📧 Ingresa tu email:", telegramClient, null);
+        logger.info("Login iniciado para chatId: {} identity: {}", chatId, telegramIdentity);
+
+        Optional<UserTT> userOp = userTTService.getUserByTelegram(telegramIdentity);
+        if (!userOp.isPresent()) {
+            BotHelper.sendMessageToTelegram(chatId,
+                "⚠️ Aún no estás registrado en el sistema. Por favor contacta a tu administrador para que te registre.",
+                telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        authenticatedUsers.put(chatId, userOp.get());
+        showMainMenu();
         exit = true;
     }
 
@@ -327,8 +329,6 @@ public class BotActions {
         if (state == BotConversationState.NONE) return;
 
         switch (state) {
-            case WAITING_LOGIN_EMAIL:              handleLoginEmail();             break;
-            case WAITING_LOGIN_PASSWORD:           handleLoginPassword();          break;
             case WAITING_REGISTER_NAME:            handleRegisterName();           break;
             case WAITING_REGISTER_EMAIL:           handleRegisterEmail();          break;
             case WAITING_REGISTER_PASSWORD:        handleRegisterPassword();       break;
@@ -417,55 +417,6 @@ public class BotActions {
 
         clearConversationState();
         BotHelper.sendMessageToTelegram(chatId, BotMessages.REGISTER_COMPLETED.getMessage(), telegramClient, null);
-        exit = true;
-    }
-
-    private void handleLoginEmail(){
-        if(!isValidEmail(requestText)){
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_EMAIL.getMessage(), telegramClient, null);
-            exit = true;
-            return;
-        }
-
-        BotLoginDraft draft = loginDrafts.computeIfAbsent(chatId, k -> new BotLoginDraft());
-        draft.setEmail(requestText.trim());
-        setCurrentState(BotConversationState.WAITING_LOGIN_PASSWORD);
-        BotHelper.sendMessageToTelegram(chatId, "Ingresa tu contraseña:", telegramClient, null);
-        exit = true;
-    }
-
-    private void handleLoginPassword(){
-        BotLoginDraft draft = loginDrafts.get(chatId);
-        if( draft == null ){
-            clearConversationState();
-            BotHelper.sendMessageToTelegram(chatId, "Error en login, intenta /login de nuevo", telegramClient, null);
-            exit = true;
-            return;
-        }
-
-        // Buscar el usuario
-
-        Optional<UserTT> userOp = userTTService.getUserByEmail(draft.getEmail());
-        if(!userOp.isPresent()){
-            BotHelper.sendMessageToTelegram(chatId, "Email no registrado.", telegramClient, null);
-            clearConversationState();
-            exit = true;
-            return;
-        }
-        
-        UserTT user = userOp.get();
-        if(!user.getPassword().equals(requestText.trim())){
-            BotHelper.sendMessageToTelegram(chatId, "Contraseña incorrecta, intenta de nuevo.", telegramClient, null);
-            draft.setPassword(null);
-            setCurrentState(BotConversationState.WAITING_LOGIN_PASSWORD);
-            exit = true;
-            return;
-        }
-
-        authenticatedUsers.put(chatId, user);
-        clearConversationState();
-        loginDrafts.remove(chatId);
-        showMainMenu();
         exit = true;
     }
 
@@ -711,13 +662,13 @@ public class BotActions {
             return;
 
         UserTT user = getAuthenticatedUser();
-        List<TaskTT> tasks = taskTTService.getTasksByUser(user.getUserId());
+        List<TaskTT> tasks = taskTTService.getTasksByUserInActiveSprint(user.getUserId());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📋 *Mis tareas*\n\n");
+        sb.append("📋 *Mis tareas — Sprint activo*\n\n");
 
         if (tasks.isEmpty()) {
-            sb.append("No tienes tareas asignadas aún.");
+            sb.append("No tienes tareas en el sprint activo.");
         } else {
             List<TaskTT> pending = tasks.stream()
                 .filter(t -> t.getDateEndRealTask() == null).collect(Collectors.toList());
@@ -813,13 +764,13 @@ public class BotActions {
         }
 
         UserTT user = getAuthenticatedUser();
-        List<TaskTT> tasks = taskTTService.getTasksByUser(user.getUserId());
+        List<TaskTT> tasks = taskTTService.getTasksByUserInActiveSprint(user.getUserId());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📊 *Progreso de tus tareas*\n\n");
+        sb.append("📊 *Progreso — Sprint activo*\n\n");
 
         if (tasks.isEmpty()) {
-            sb.append("Aún no tienes tareas asignadas.");
+            sb.append("No tienes tareas en el sprint activo.");
         } else {
             long done    = tasks.stream().filter(t -> t.getDateEndRealTask() != null).count();
             long pending = tasks.stream().filter(t -> t.getDateEndRealTask() == null).count();
@@ -845,7 +796,7 @@ public class BotActions {
         }
 
         UserTT user = getAuthenticatedUser();
-        List<TaskTT> pending = taskTTService.getTasksByUser(user.getUserId()).stream()
+        List<TaskTT> pending = taskTTService.getTasksByUserInActiveSprint(user.getUserId()).stream()
             .filter(t -> t.getDateEndRealTask() == null)
             .collect(Collectors.toList());
 

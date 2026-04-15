@@ -1,0 +1,55 @@
+#!/bin/bash
+# ============================================
+# Setup para desarrollo local - TaskTuner
+# ============================================
+# Este script configura las variables de entorno
+# necesarias para ejecutar el backend localmente
+#
+# INSTRUCCIONES:
+# 1. Copia este archivo: cp setup-local.sh.example setup-local.sh
+# 2. Edita setup-local.sh y reemplaza las credenciales
+# 3. Ejecuta: source setup-local.sh
+
+# Colores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}=== Setup Local - TaskTuner ===${NC}\n"
+
+# Verificar que el wallet existe
+if [ ! -d "backend/src/main/resources/wallet" ]; then
+    echo -e "${RED}❌ ERROR: Carpeta wallet no encontrada${NC}"
+    echo "   Asegúrate de tener los archivos del wallet en: backend/src/main/resources/wallet"
+    exit 1
+fi
+
+# Verificar que los archivos .ora existen
+if [ ! -f "backend/src/main/resources/wallet/tnsnames.ora" ]; then
+    echo -e "${RED}❌ ERROR: tnsnames.ora no encontrado${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ Wallet encontrado${NC}"
+
+export TNS_ADMIN="${PWD}/backend/src/main/resources/wallet"
+export DB_USER="LOSPAPOIS"
+export DB_PASSWORD="YOUR_PASSWORD_HERE" 
+export TELEGRAM_BOT_TOKEN="YOUR_BOT_TOKEN_HERE"
+
+echo "Variables de entorno configuradas:"
+echo -e "  TNS_ADMIN=${GREEN}${TNS_ADMIN}${NC}"
+echo -e "  DB_USER=${GREEN}${DB_USER}${NC}"
+echo -e "  DB_PASSWORD=${GREEN}***${NC}\n"
+
+echo -e "${YELLOW}Para ejecutar el backend:${NC}"
+echo "  cd backend"
+echo "  mvn clean package"
+echo "  java -jar target/MyTodoList-0.0.1-SNAPSHOT.jar\n"
+
+echo -e "${YELLOW}Para ejecutar en desarrollo (Maven):${NC}"
+echo "  cd backend"
+echo "  mvn spring-boot:run\n"
+
+echo -e "${GREEN}✓ Setup completado${NC}"

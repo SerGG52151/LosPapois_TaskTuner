@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import useLogin from '../Hooks/useLogin';
 
 export default function LoginPage(): JSX.Element {
-  const navigate = useNavigate();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const { loading, error, handleSubmit: login } = useLogin();
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Frontend-only: backend login will be implemented later.
-    console.log('login attempt', { email, password });
-    //alert('Login submitted (frontend only), redirecting...');
-    navigate("/tasks"); // Simulate successful login by redirecting to dashboard
+    await login(email, password);
   }
 
   return (
@@ -24,6 +22,12 @@ export default function LoginPage(): JSX.Element {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
+                {error}
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
@@ -31,7 +35,8 @@ export default function LoginPage(): JSX.Element {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
+                disabled={loading}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-100"
                 autoComplete="email"
               />
             </div>
@@ -43,7 +48,8 @@ export default function LoginPage(): JSX.Element {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
+                disabled={loading}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-100"
                 autoComplete="current-password"
               />
             </div>
@@ -51,9 +57,9 @@ export default function LoginPage(): JSX.Element {
             <div>
               <button
                 type="submit"
-                className="w-full bg-brand hover:bg-brand-dark text-white py-2 rounded-md font-medium"
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-medium"
               >
-                Log in
+                {loading ? 'Iniciando sesión...' : 'Log in'}
               </button>
             </div>
           </form>

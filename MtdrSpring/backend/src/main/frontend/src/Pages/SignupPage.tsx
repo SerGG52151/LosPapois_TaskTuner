@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
+import useSignup from '../Hooks/useSignup';
 
 const SignupPage: React.FC = () => {
-    const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [telegramId, setTelegramId] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const { loading, error, handleSubmit } = useSignup();
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
     };
 
-    const handleSignup = (e: React.FormEvent) => {
+    const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Signup Attempt:', { username, email, telegramId, password });
-        alert('Signup completed successfully! Please log in now.');
-        navigate("/login"); // Simulate successful signup by redirecting to login page
+        await handleSubmit(username, email, telegramId, password);
     };
 
     return (
@@ -30,6 +29,11 @@ const SignupPage: React.FC = () => {
                     </div>
 
                     <form onSubmit={handleSignup} className="space-y-4">
+                        {error && (
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-md text-red-600 text-sm">
+                                {error}
+                            </div>
+                        )}
                         <div>
                             <label htmlFor="signup-username" className="block text-sm font-medium text-gray-700 mb-1">
                                 Username
@@ -111,9 +115,10 @@ const SignupPage: React.FC = () => {
 
                         <button
                             type="submit"
-                            className="w-full bg-brand hover:bg-brand-dark text-white py-2 rounded-md font-medium"
+                            disabled={loading}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Sign up
+                            {loading ? 'Signing up...' : 'Sign up'}
                         </button>
                     </form>
 
