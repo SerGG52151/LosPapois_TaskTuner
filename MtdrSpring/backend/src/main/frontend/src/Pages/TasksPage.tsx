@@ -6,6 +6,7 @@ import { Button, TableBody, CircularProgress } from '@mui/material';
 import Moment from 'react-moment';
 import { FunnelIcon, CheckCircleIcon, ArrowUturnLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
+import palette from '../theme';
 
 type Priority = 'alta' | 'media' | 'baja';
 
@@ -47,8 +48,8 @@ function StoryPointsBadge({ points }: { points?: number }) {
   if (points === undefined) return null;
   return (
     <span style={{
-      backgroundColor: '#ede9fe',
-      color: '#7c3aed',
+      backgroundColor: palette.bgLight,
+      color: palette.secondary,
       padding: '2px 8px',
       borderRadius: '9999px',
       fontSize: '12px',
@@ -67,7 +68,7 @@ const filterOptionStyle: React.CSSProperties = {
   padding: '8px 16px',
   border: 'none',
   backgroundColor: 'transparent',
-  color: '#450a0a',
+  color: palette.primaryDark,
   fontSize: '14px',
   cursor: 'pointer',
 };
@@ -229,10 +230,10 @@ export default function TasksPage() {
               alignItems: 'center',
               gap: '4px',
               padding: '8px 14px',
-              border: '1px solid #fca5a5',
+              border: `1px solid ${palette.surface}`,
               borderRadius: '0.25rem',
-              backgroundColor: showFilter ? '#fee2e2' : '#ffffff',
-              color: '#dc2626',
+              backgroundColor: showFilter ? palette.bgLight : '#ffffff',
+              color: palette.primary,
               fontWeight: 'bold',
               fontSize: 'max(11px, min(2vw, 14px))',
               cursor: 'pointer',
@@ -249,7 +250,7 @@ export default function TasksPage() {
               top: '100%',
               marginTop: '4px',
               backgroundColor: '#ffffff',
-              border: '1px solid #fecaca',
+              border: `1px solid ${palette.surface}`,
               borderRadius: '0.5rem',
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
               zIndex: 10,
@@ -282,7 +283,7 @@ export default function TasksPage() {
                       title="Marcar como completada"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
                     >
-                      <CheckCircleIcon style={{ height: '22px', width: '22px', color: '#16a34a' }} />
+                      <CheckCircleIcon style={{ height: '22px', width: '22px', color: palette.primary }} />
                     </button>
                   </td>
                 </tr>

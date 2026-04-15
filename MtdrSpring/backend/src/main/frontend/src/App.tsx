@@ -6,6 +6,7 @@ import SignupPage from './Pages/SignupPage';
 import TailwindTestPage from './Pages/TailwindTestPage';
 import ProfilePage from './Pages/ProfilePage';
 import TeamPage from './Pages/TeamPage';
+import ProjectsPage from './Pages/ProjectsPage';
 import Navigation from './Components/Navigation';
 
 function App() {
@@ -22,7 +23,7 @@ function App() {
         <Route path="/dashboard" element={<Navigate to="/tasks" replace />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/projects" element={<Navigate to="/tasks" replace />} />
+        <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/tasks" element={<TasksPage/>} />
         <Route path="/signup" element={<SignupPage/>} />
         <Route path="/tailwind-test" element={<TailwindTestPage/>} />

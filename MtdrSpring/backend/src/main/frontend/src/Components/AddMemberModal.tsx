@@ -51,7 +51,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
               required
               value={form.name}
               onChange={e => handleChange('name', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-colors"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-colors"
             />
           </div>
           <div>
@@ -61,7 +61,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
               required
               value={form.email}
               onChange={e => handleChange('email', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-colors"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-colors"
             />
           </div>
           <div>
@@ -71,7 +71,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
               required
               value={form.role}
               onChange={e => handleChange('role', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-colors"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-colors"
             />
           </div>
           <div>
@@ -81,7 +81,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
               required
               value={form.telegramId}
               onChange={e => handleChange('telegramId', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition-colors"
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand focus:bg-white transition-colors"
             />
           </div>
 
@@ -95,7 +95,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
             </button>
             <button
               type="submit"
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-full font-medium transition-colors"
+              className="flex-1 bg-brand hover:bg-brand-dark text-white py-3 rounded-full font-medium transition-colors"
             >
               {isEditing ? 'Guardar' : 'Agregar'}
             </button>

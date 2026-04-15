@@ -31,7 +31,7 @@ export default function LoginPage(): JSX.Element {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                 autoComplete="email"
               />
             </div>
@@ -43,7 +43,7 @@ export default function LoginPage(): JSX.Element {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                 autoComplete="current-password"
               />
             </div>
@@ -51,7 +51,7 @@ export default function LoginPage(): JSX.Element {
             <div>
               <button
                 type="submit"
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-medium"
+                className="w-full bg-brand hover:bg-brand-dark text-white py-2 rounded-md font-medium"
               >
                 Log in
               </button>

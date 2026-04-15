@@ -5,13 +5,11 @@ const TailwindTestPage: React.FC = () => {
     <div className="font-sans min-h-screen bg-gray-100 p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         
-        {/* Header */}
         <header className="bg-white p-6 rounded-xl shadow-md border-t-4 border-blue-500">
           <h1 className="text-3xl font-bold text-gray-800">Tailwind CSS Test Page</h1>
           <p className="text-gray-600 mt-2">Use this page to verify your Tailwind classes are rendering correctly.</p>
         </header>
 
-        {/* Colors & Typography */}
         <section className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Colors & Typography</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -29,7 +27,6 @@ const TailwindTestPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Flexbox & Buttons */}
         <section className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Flexbox & Buttons</h2>
           <div className="flex flex-col sm:flex-row items-center justify-between bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -45,7 +42,6 @@ const TailwindTestPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Grid System */}
         <section className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Grid System</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -57,7 +53,6 @@ const TailwindTestPage: React.FC = () => {
           </div>
         </section>
 
-        {/* Alerts */}
         <section className="bg-white p-6 rounded-xl shadow-sm">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4 border-b pb-2">Status Alerts</h2>
           <div className="space-y-3">

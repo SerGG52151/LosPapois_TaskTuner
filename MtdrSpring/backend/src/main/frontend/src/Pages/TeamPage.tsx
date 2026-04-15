@@ -60,7 +60,7 @@ export default function TeamPage() {
           </div>
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
+            className="flex items-center gap-2 bg-brand hover:bg-brand-dark text-white px-5 py-2.5 rounded-lg font-medium transition-colors"
           >
             <UserGroupIcon className="h-5 w-5" />
             Agregar Miembro

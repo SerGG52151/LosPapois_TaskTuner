@@ -23,14 +23,14 @@ export default function MemberCard({ name, role, email, telegramId, onEdit, onDe
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between mb-4">
-        <div className="bg-red-500 text-white rounded-full h-12 w-12 flex items-center justify-center font-bold text-sm">
+        <div className="bg-brand text-white rounded-full h-12 w-12 flex items-center justify-center font-bold text-sm">
           {getInitials(name)}
         </div>
         <div className="flex gap-2">
           <button onClick={onEdit} className="text-gray-400 hover:text-gray-600 transition-colors">
             <PencilSquareIcon className="h-5 w-5" />
           </button>
-          <button onClick={onDelete} className="text-gray-400 hover:text-red-500 transition-colors">
+          <button onClick={onDelete} className="text-gray-400 hover:text-red-400 transition-colors">
             <TrashIcon className="h-5 w-5" />
           </button>
         </div>

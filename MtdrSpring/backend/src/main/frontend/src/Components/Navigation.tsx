@@ -22,13 +22,13 @@ export default function Example() {
   }
 
   return (
-    <Disclosure as="nav" className="relative bg-red-200">
+    <Disclosure as="nav" className="relative bg-brand-dark shadow-lg shadow-brand-dark/30 border-b border-brand-dark/40">
       {({ open }) => (
         <>
           <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
             <div className="relative flex h-20 items-center justify-between">
               <div className="absolute inset-y-0 left-0 flex items-center sm:hidden">
-                <Disclosure.Button className="relative inline-flex items-center justify-center rounded-md p-2 text-white-400 hover:bg-white/5 hover:text-white focus:outline-2 focus:-outline-offset-1 focus:outline-black-500">
+                <Disclosure.Button className="relative inline-flex items-center justify-center rounded-lg p-2 text-brand-lighter hover:bg-white/10 hover:text-white focus:outline-2 focus:-outline-offset-1 focus:outline-white/30">
                   <span className="absolute -inset-0.5" />
                   <span className="sr-only">Open main menu</span>
                   {open ? (
@@ -41,7 +41,7 @@ export default function Example() {
 
               <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
                 <div className="flex shrink-0 items-center">
-                  <span className="text-2xl font-bold">TaskTuner</span>
+                  <span className="text-2xl font-bold text-white tracking-wide drop-shadow-md">TaskTuner</span>
                 </div>
                 <div className="hidden sm:ml-10 sm:block">
                   <div className="flex space-x-6">
@@ -51,8 +51,10 @@ export default function Example() {
                         to={item.href}
                         aria-current={location.pathname === item.href ? 'page' : undefined}
                         className={classNames(
-                          location.pathname === item.href ? 'bg-red-900 text-white' : 'text-white-300 hover:bg-white/5 hover:text-white',
-                          'rounded-md px-4 py-2.5 text-base font-medium',
+                          location.pathname === item.href
+                            ? 'bg-white/20 text-white shadow-inner shadow-brand-dark/30 border border-white/10'
+                            : 'text-brand-lighter hover:bg-white/10 hover:text-white hover:shadow-md hover:shadow-brand-dark/20',
+                          'rounded-lg px-4 py-2.5 text-base font-medium backdrop-blur-sm',
                         )}
                       >
                         {item.name}
@@ -66,7 +68,7 @@ export default function Example() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="flex items-center gap-2 rounded-md px-4 py-2.5 text-base font-medium text-white-300 hover:bg-white/5 hover:text-white"
+                  className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-base font-medium text-brand-lighter hover:bg-white/10 hover:text-white hover:shadow-md hover:shadow-brand-dark/20 backdrop-blur-sm"
                 >
                   <ArrowRightStartOnRectangleIcon aria-hidden="true" className="size-6" />
                   Cerrar Sesión
@@ -84,8 +86,10 @@ export default function Example() {
                   to={item.href}
                   aria-current={location.pathname === item.href ? 'page' : undefined}
                   className={classNames(
-                    location.pathname === item.href ? 'bg-red-900 text-white' : 'text-white-300 hover:bg-white/5 hover:text-white',
-                    'block rounded-md px-3 py-2 text-base font-medium',
+                    location.pathname === item.href
+                      ? 'bg-white/20 text-white shadow-inner shadow-brand-dark/30 border border-white/10'
+                      : 'text-brand-lighter hover:bg-white/10 hover:text-white',
+                    'block rounded-lg px-3 py-2 text-base font-medium',
                   )}
                 >
                   {item.name}
