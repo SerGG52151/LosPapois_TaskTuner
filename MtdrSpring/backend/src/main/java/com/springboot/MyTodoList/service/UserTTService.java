@@ -69,7 +69,7 @@ public class UserTTService {
         }
 
         UserTT user = new UserTT();
-        user.setNameUser(req.getFirstName().trim() + " " + req.getLastName().trim());
+        user.setNameUser(req.getUsername().trim());
         user.setMail(req.getMail());
         user.setPassword(req.getPassword());
         user.setIdTelegram(req.getIdTelegram());
