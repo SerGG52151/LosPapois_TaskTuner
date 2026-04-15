@@ -87,6 +87,10 @@ public class UserTTService {
         return userTTRepository.findByRole(role);
     }
 
+    public Optional<UserTT> getUserByEmail(String email){
+        return userTTRepository.findByMail(email);
+    }
+
     // ─── Write Operations ─────────────────────────────────────────────────
 
     /**
@@ -151,4 +155,6 @@ public class UserTTService {
             return false;
         }
     }
+
+    
 }
