@@ -44,7 +44,7 @@ const SignupPage: React.FC = () => {
                                 required
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                                 autoComplete="username"
                             />
                         </div>
@@ -59,7 +59,7 @@ const SignupPage: React.FC = () => {
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                                 autoComplete="email"
                             />
                         </div>
@@ -74,7 +74,7 @@ const SignupPage: React.FC = () => {
                                 required
                                 value={telegramId}
                                 onChange={(e) => setTelegramId(e.target.value)}
-                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                                 autoComplete="off"
                             />
                         </div>
@@ -90,7 +90,7 @@ const SignupPage: React.FC = () => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-3 py-2 pr-10 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                                     autoComplete="new-password"
                                 />
                                 <button
@@ -116,7 +116,7 @@ const SignupPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-brand hover:bg-brand-dark text-white py-2 rounded-md font-medium"
                         >
                             {loading ? 'Signing up...' : 'Sign up'}
                         </button>

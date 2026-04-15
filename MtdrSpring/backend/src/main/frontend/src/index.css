@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  background-color: #ffffff; /* White background */
+  background-color: #ffffff;
   width: 100%;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -11,30 +11,31 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #b91c1c; /* Crimson Red text for overall theme */
+  color: #004D40;
 }
 
-/* Base link styling to match red/white */
 a {
-  color: #dc2626;
+  color: #009B77;
 }
 a:hover {
-  color: #991b1b;
+  color: #004D40;
 }
 
 .App {
   background: #ffffff;
-  color: #7f1d1d; /* Darker red */
+  color: #004D40;
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: max(12px, min(2vw, 18px));
-  margin: 2rem 2rem 4rem 2rem;
-  padding: 1rem;
+  font-size: max(14px, min(2vw, 20px));
+  margin: 2rem auto 4rem auto;
+  padding: 2rem 3rem;
   position: relative;
-  box-shadow: 0 10px 18px 0 rgba(220, 38, 38, 0.1), 0 4.5rem 8rem 0 rgba(220, 38, 38, 0.05); /* Red tinted shadow */
-  border: 1px solid #fee2e2; /* Light red border */
+  box-shadow: 0 10px 18px 0 rgba(0, 155, 119, 0.08), 0 4.5rem 8rem 0 rgba(0, 155, 119, 0.04);
+  border: 1px solid #B2DFDB;
   border-radius: 0.5rem;
+  max-width: 1200px;
+  width: 90%;
 }
 
 div#maincontent,
@@ -48,32 +49,35 @@ div#maincontent {
 }
 
 h1, h2 {
-  color: #dc2626; /* Bright Red heading */
+  color: #004D40;
 }
 
 h1 {
-  margin: 0.5rem 0 1rem 0;
+  margin: 0.5rem 0 1.5rem 0;
   padding: 0;
+  font-size: 2rem;
 }
 
 h2 {
-  margin: 0.1rem 0 0.1rem 0;
+  margin: 0.5rem 0 0.5rem 0;
   padding: 0;
-  border-bottom: 2px solid #fecaca;
-  padding-bottom: 0.2rem;
+  border-bottom: 2px solid #B2DFDB;
+  padding-bottom: 0.4rem;
+  font-size: 1.4rem;
 }
 
 #newiteminput {
   width: 100%;
-  border: 1px solid #fca5a5;
+  border: 1px solid #B2DFDB;
   border-radius: 0.3rem;
-  padding-left: 10px;
+  padding: 12px 14px;
+  font-size: 1rem;
 }
 
 #newiteminput:focus {
   outline: none;
-  border-color: #dc2626;
-  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+  border-color: #009B77;
+  box-shadow: 0 0 0 2px rgba(0, 155, 119, 0.2);
 }
 
 div#newinputform {
@@ -107,9 +111,10 @@ table.itemlist {
 }
 
 table.itemlist td {
-  border-bottom: solid 1px #fecaca; /* Light red border */
-  padding: .5rem;
-  color: #450a0a; /* Deep redtext */
+  border-bottom: solid 1px #B2DFDB;
+  padding: 0.8rem 0.5rem;
+  color: #004D40;
+  font-size: 1rem;
 }
 
 table.itemlist td.description {
@@ -120,14 +125,14 @@ table.itemlist td.description {
 
 table.itemlist td.date {
   font-size: max(10px, min(1.5vw, 14px));
-  color: #991b1b;
+  color: #00796B;
   white-space: nowrap;
   padding-right: 0;
   padding-left: 0;
 }
 
 table.itemlist tr:hover {
-  background-color: #fef2f2; /* Very light red hover */
+  background-color: #E0F7FA;
 }
 
 input {
@@ -145,8 +150,8 @@ input {
 button.AddButton,
 button.DeleteButton,
 button.DoneButton {
-  font-size: max(8px, min(2vw, 12px)) !important;
-  padding: 0.35em 0.5em !important;
+  font-size: max(11px, min(2vw, 14px)) !important;
+  padding: 0.5em 1em !important;
   font-weight: bold;
   border-radius: 0.25rem !important;
   transition: all 0.2s;
@@ -154,28 +159,28 @@ button.DoneButton {
 
 button.AddButton {
   color: #ffffff !important;
-  background-color: #ef4444 !important; /* Tailwind Red 500 */
+  background-color: #009B77 !important;
 }
 
 button.AddButton:hover {
-  background-color: #dc2626 !important; 
+  background-color: #004D40 !important;
 }
 
 button.DeleteButton {
   color: #ffffff !important;
-  background-color: #991b1b !important;
+  background-color: #004D40 !important;
 }
 
 button.DeleteButton:hover {
-  background-color: #7f1d1d !important;
+  background-color: #004D00 !important;
 }
 
 button.DoneButton {
-  color: #dc2626 !important;
+  color: #009B77 !important;
   background-color: #ffffff !important;
-  border: 1px solid #dc2626 !important;
+  border: 1px solid #009B77 !important;
 }
 
 button.DoneButton:hover {
-  background-color: #fee2e2 !important;
+  background-color: #E0F7FA !important;
 }

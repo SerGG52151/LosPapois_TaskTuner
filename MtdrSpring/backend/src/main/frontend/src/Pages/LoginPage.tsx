@@ -36,7 +36,7 @@ export default function LoginPage(): JSX.Element {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-100"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                 autoComplete="email"
               />
             </div>
@@ -49,7 +49,7 @@ export default function LoginPage(): JSX.Element {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-100"
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-brand"
                 autoComplete="current-password"
               />
             </div>
@@ -57,8 +57,7 @@ export default function LoginPage(): JSX.Element {
             <div>
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-md font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-brand hover:bg-brand-dark text-white py-2 rounded-md font-medium"
               >
                 {loading ? 'Iniciando sesión...' : 'Log in'}
               </button>
