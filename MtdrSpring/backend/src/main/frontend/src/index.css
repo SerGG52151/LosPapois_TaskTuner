@@ -1,134 +1,181 @@
-/*
-** Todo application version 1.0.
-**
-** Copyright (c) 2020, Oracle and/or its affiliates.
-** Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl/
-*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
-    /* from the redwood theme */
-    background-color: #3A3632;
-    width: 100%;
-    max-width: 50rem;
-    margin: 0 auto;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-  .App {
-    background: #201E1C;
-    color: #FEF9F2;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    font-size: max(12px,min(2vw, 18px)); /*calc(1vw + 1vmin);*/
-    margin: 2rem 0 4rem 0;
-    padding: 1rem;
-    position: relative;
-    box-shadow: 0 10px 18px 0 rgba(0, 0, 0, 0.2), 0 4.5rem 8rem 0 rgba(0, 0, 0, 0.1);
-    border-radius: 0.5rem;
-  }
-  div#maincontent, div#newinputform form {
-    width: 95%;
-  }
-  div#maincontent {
-    margin: 0;
-    padding: 0;
-  }
-  h1 {
-    margin: 0.5rem 0 1rem 0;
-    padding: 0;
-  }
-  h2 {
-    margin: 0.1rem 0 0.1rem 0;
-    padding: 0;
-  }
-  #newiteminput {
-    width: 100%;
-  }
-  div#newinputform {
-    width: 100%;
-  }
-  div#newinputform form{
-    display: flex;
-    flex-direction: row;
-    margin: 0 auto;
-  }
-  #donelist {
-    margin: 0;
-    padding: 0;
-  }
-  table#itemlistNotDone {
-    margin-bottom: 2rem;
-  }
-  table#itemlistDone {
-    margin-bottom: 3rem;
-  }
-  table.itemlist {
-    margin-top: 0.7rem;
-    border-collapse: collapse;
-    margin-bottom: 1rem;
-  }
-  table.itemlist td {
-    border-bottom: solid 1px #5B5652;
-    padding: .5rem;
-  }
-  table.itemlist td.description {
-    width: 100%;
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  table.itemlist td.date {
-    font-size: max(10px,min(1.5vw, 14px));
-    color: grey;
-    white-space: nowrap;
-    padding-right: 0;
-    padding-left: 0;
-  }
-  table.itemlist tr:hover {
-    background-color: #161513;
-  }
-  input {
-    font-family: inherit;
-    font-size: 100%;
-    line-height: 1;
-    margin: 0;
-  }
-  button,
-  input {
-    overflow: visible;
-  }
-  input[type="text"] {
-    border-radius: 0.3rem;
-    padding-left: 10px;
-  }
-  button.AddButton,
-  button.DeleteButton,
-  button.AddButton,
-  button.DoneButton {
-    font-size: max(8px,min(2vw, 12px));
-    padding: 0.35em 0.5em;
-    color:#161513;
-  }
-  /* from the redwood theme */
-  button.AddButton {
-    color: #FEF9F2;
-    background-color: #5F7D4F;
-  }
-  button.AddButton:hover {
-    background-color: #6F915D;
-  }
-  button.DeleteButton {
-    color: #FEF9F2;
-    background-color:  #D63B25;
-  }
-  button.DeleteButton:hover {
-    background-color: #EC4F3A
-  }
-  button.DoneButton {
-    background-color: #FBF9F8;
-  }
-  button.DoneButton:hover {
-    background-color: #D4CFCA;
-  }
+  background-color: #ffffff; /* White background */
+  width: 100%;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #b91c1c; /* Crimson Red text for overall theme */
+}
+
+/* Base link styling to match red/white */
+a {
+  color: #dc2626;
+}
+a:hover {
+  color: #991b1b;
+}
+
+.App {
+  background: #ffffff;
+  color: #7f1d1d; /* Darker red */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: max(12px, min(2vw, 18px));
+  margin: 2rem 2rem 4rem 2rem;
+  padding: 1rem;
+  position: relative;
+  box-shadow: 0 10px 18px 0 rgba(220, 38, 38, 0.1), 0 4.5rem 8rem 0 rgba(220, 38, 38, 0.05); /* Red tinted shadow */
+  border: 1px solid #fee2e2; /* Light red border */
+  border-radius: 0.5rem;
+}
+
+div#maincontent,
+div#newinputform form {
+  width: 95%;
+}
+
+div#maincontent {
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2 {
+  color: #dc2626; /* Bright Red heading */
+}
+
+h1 {
+  margin: 0.5rem 0 1rem 0;
+  padding: 0;
+}
+
+h2 {
+  margin: 0.1rem 0 0.1rem 0;
+  padding: 0;
+  border-bottom: 2px solid #fecaca;
+  padding-bottom: 0.2rem;
+}
+
+#newiteminput {
+  width: 100%;
+  border: 1px solid #fca5a5;
+  border-radius: 0.3rem;
+  padding-left: 10px;
+}
+
+#newiteminput:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+}
+
+div#newinputform {
+  width: 100%;
+}
+
+div#newinputform form {
+  display: flex;
+  flex-direction: row;
+  margin: 0 auto;
+}
+
+#donelist {
+  margin: 0;
+  padding: 0;
+}
+
+table#itemlistNotDone {
+  margin-bottom: 2rem;
+}
+
+table#itemlistDone {
+  margin-bottom: 3rem;
+}
+
+table.itemlist {
+  margin-top: 0.7rem;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+table.itemlist td {
+  border-bottom: solid 1px #fecaca; /* Light red border */
+  padding: .5rem;
+  color: #450a0a; /* Deep redtext */
+}
+
+table.itemlist td.description {
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+table.itemlist td.date {
+  font-size: max(10px, min(1.5vw, 14px));
+  color: #991b1b;
+  white-space: nowrap;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+table.itemlist tr:hover {
+  background-color: #fef2f2; /* Very light red hover */
+}
+
+input {
+  font-family: inherit;
+  font-size: 100%;
+  line-height: 1;
+  margin: 0;
+}
+
+button,
+input {
+  overflow: visible;
+}
+
+button.AddButton,
+button.DeleteButton,
+button.DoneButton {
+  font-size: max(8px, min(2vw, 12px)) !important;
+  padding: 0.35em 0.5em !important;
+  font-weight: bold;
+  border-radius: 0.25rem !important;
+  transition: all 0.2s;
+}
+
+button.AddButton {
+  color: #ffffff !important;
+  background-color: #ef4444 !important; /* Tailwind Red 500 */
+}
+
+button.AddButton:hover {
+  background-color: #dc2626 !important; 
+}
+
+button.DeleteButton {
+  color: #ffffff !important;
+  background-color: #991b1b !important;
+}
+
+button.DeleteButton:hover {
+  background-color: #7f1d1d !important;
+}
+
+button.DoneButton {
+  color: #dc2626 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #dc2626 !important;
+}
+
+button.DoneButton:hover {
+  background-color: #fee2e2 !important;
+}
