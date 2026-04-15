@@ -15,7 +15,11 @@
 *.zip
 *.tar.gz
 *.rar
-
+.claude
+backend/target/*
+backend/.settings/*
+backend/.project
+backend/.classpath
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 *~
