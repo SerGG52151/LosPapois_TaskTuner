@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.springboot.MyTodoList.dto.LoginRequest;
@@ -22,6 +23,12 @@ public class UserTTService {
      */
     @Autowired
     private UserTTRepository userTTRepository;
+
+    /*
+     * BCryptPasswordEncoder for hashing passwords securely.
+     * BCrypt includes salt generation and multiple iterations to prevent rainbow table attacks.
+     */
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public List<UserTT> findAll() {
         return userTTRepository.findAll();
@@ -56,7 +63,7 @@ public class UserTTService {
 
     public Optional<UserTT> login(LoginRequest req) {
         return userTTRepository.findByMail(req.getMail())
-                .filter(u -> u.getPassword() != null && u.getPassword().equals(req.getPassword()));
+                .filter(u -> u.getPassword() != null && passwordEncoder.matches(req.getPassword(), u.getPassword()));
     }
 
 
@@ -71,7 +78,8 @@ public class UserTTService {
         UserTT user = new UserTT();
         user.setNameUser(req.getUsername().trim());
         user.setMail(req.getMail());
-        user.setPassword(req.getPassword());
+        // Hash the password using BCrypt before storing
+        user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setIdTelegram(req.getIdTelegram());
         user.setRole("developer");
         return userTTRepository.save(user);
@@ -87,7 +95,8 @@ public class UserTTService {
             UserTT user = existing.get();
             // Only update fields the client is allowed to change:
             user.setNameUser(updatedUser.getNameUser());
-            user.setPassword(updatedUser.getPassword());
+            // Hash the password if it's being updated
+            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
             user.setIdTelegram(updatedUser.getIdTelegram());
             user.setMail(updatedUser.getMail());
             user.setRole(updatedUser.getRole());
