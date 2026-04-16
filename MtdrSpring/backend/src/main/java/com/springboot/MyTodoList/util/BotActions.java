@@ -851,6 +851,13 @@ public class BotActions {
         task.setDateEndRealTask(LocalDate.now());
         taskTTService.updateTask(taskId, task);
 
+        // Update SPRINT_TASK_TT.state_task from "active" → "done"
+        sprintTaskTTService.getSprintsForTask(taskId).stream()
+            .filter(st -> "active".equals(st.getStateTask()))
+            .findFirst()
+            .ifPresent(st -> sprintTaskTTService.updateTaskState(
+                st.getId().getSprId(), taskId, "done"));
+
         boolean onTime = !LocalDate.now().isAfter(task.getDateEndSetTask());
         String resultado = onTime ? "⏱ entregada a tiempo!" : "⚠️ entregada con retraso.";
         BotHelper.sendMessageToTelegram(
