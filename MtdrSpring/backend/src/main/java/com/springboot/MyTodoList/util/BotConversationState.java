@@ -5,8 +5,6 @@ public enum BotConversationState {
     // Creación de tareas
     WAITING_NEW_ITEM_NAME,
     WAITING_NEW_ITEM_STORY_POINTS,
-    WAITING_NEW_ITEM_DATE_START,
-    WAITING_NEW_ITEM_DATE_END,
     WAITING_NEW_ITEM_PRIORITY,
     WAITING_NEW_ITEM_SPRINT,
     // Flujo de creación de cuenta

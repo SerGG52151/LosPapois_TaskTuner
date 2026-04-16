@@ -335,8 +335,6 @@ public class BotActions {
             case WAITING_REGISTER_PASSWORD_CONFIRM:handleRegisterPasswordConfirm();break;
             case WAITING_NEW_ITEM_NAME:            handleNewItemName();            break;
             case WAITING_NEW_ITEM_STORY_POINTS:    handleNewItemStoryPoints();     break;
-            case WAITING_NEW_ITEM_DATE_START:      handleNewItemDateStart();       break;
-            case WAITING_NEW_ITEM_DATE_END:        handleNewItemDateEnd();         break;
             case WAITING_NEW_ITEM_PRIORITY:        handleNewItemPriority();        break;
             case WAITING_NEW_ITEM_SPRINT:          handleNewItemSprint();          break;
             default: break;
@@ -435,39 +433,11 @@ public class BotActions {
             int sp = Integer.parseInt(requestText.trim());
             BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
             draft.setStoryPoints(sp);
-            setCurrentState(BotConversationState.WAITING_NEW_ITEM_DATE_START);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_ITEM_DATE_START.getMessage(), telegramClient, null);
+            setCurrentState(BotConversationState.WAITING_NEW_ITEM_PRIORITY);
+            showPriorityButtons();
         } catch (NumberFormatException e) {
             BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_STORY_POINTS.getMessage(), telegramClient, null);
         }
-        exit = true;
-    }
-
-    private void handleNewItemDateStart() {
-        LocalDate date = parseDate(requestText);
-        if (date == null) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_DATE.getMessage(), telegramClient, null);
-            exit = true;
-            return;
-        }
-        BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
-        draft.setDateStart(date);
-        setCurrentState(BotConversationState.WAITING_NEW_ITEM_DATE_END);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_ITEM_DATE_END.getMessage(), telegramClient, null);
-        exit = true;
-    }
-
-    private void handleNewItemDateEnd() {
-        LocalDate date = parseDate(requestText);
-        if (date == null) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_DATE.getMessage(), telegramClient, null);
-            exit = true;
-            return;
-        }
-        BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
-        draft.setDateEnd(date);
-        setCurrentState(BotConversationState.WAITING_NEW_ITEM_PRIORITY);
-        showPriorityButtons();
         exit = true;
     }
 
@@ -624,8 +594,8 @@ public class BotActions {
         TaskTT task = new TaskTT();
         task.setNameTask(draft.getName());
         task.setStoryPoints(draft.getStoryPoints());
-        task.setDateStartTask(draft.getDateStart());
-        task.setDateEndSetTask(draft.getDateEnd());
+        task.setDateStartTask(sprint.getDateStartSpr());
+        task.setDateEndSetTask(sprint.getDateEndSpr());
         task.setPriority(draft.getPriority());
         task.setUserId(currentUser.getUserId());
         task.setPjId(sprint.getPjId());
