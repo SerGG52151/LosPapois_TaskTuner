@@ -3,6 +3,7 @@ package com.springboot.MyTodoList.util;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -139,13 +140,13 @@ public class BotActions {
             InlineKeyboardMarkup teclado = InlineKeyboardMarkup.builder()
                 .keyboardRow(new InlineKeyboardRow(
                     InlineKeyboardButton.builder()
-                        .text("🔐 Iniciar Sesión")
+                        .text("🔐 Login")
                         .callbackData(BotCommands.LOGIN_COMMAND.getCommand())
                         .build()
                 ))
                 .build();
             BotHelper.sendMessageToTelegramButtons(
-                chatId, "👋 Bienvenido! Por favor inicia sesión.", telegramClient, teclado);
+                chatId, "👋 Welcome! Please log in.", telegramClient, teclado);
         } else {
             showMainMenu();
         }
@@ -157,19 +158,19 @@ public class BotActions {
         InlineKeyboardMarkup teclado = InlineKeyboardMarkup.builder()
             .keyboardRow(new InlineKeyboardRow(
                 InlineKeyboardButton.builder()
-                    .text("➕ Agregar tarea")
+                    .text("➕ Add Task")
                     .callbackData(BotCommands.ADD_ITEM.getCommand())
                     .build()
             ))
             .keyboardRow(new InlineKeyboardRow(
                 InlineKeyboardButton.builder()
-                    .text("✅ Completar tarea")
+                    .text("✅ Complete Task")
                     .callbackData(BotCommands.MARK_DONE.getCommand())
                     .build()
             ))
             .keyboardRow(new InlineKeyboardRow(
                 InlineKeyboardButton.builder()
-                    .text("📋 Ver mis tareas")
+                    .text("📋 My Tasks")
                     .callbackData(BotCommands.TODO_LIST.getCommand())
                     .build()
             ))
@@ -181,19 +182,19 @@ public class BotActions {
             ))
             .keyboardRow(new InlineKeyboardRow(
                 InlineKeyboardButton.builder()
-                    .text("🚪 Cerrar sesión")
+                    .text("🚪 Logout")
                     .callbackData(BotCommands.HIDE_COMMAND.getCommand())
                     .build()
             ))
             .build();
         BotHelper.sendMessageToTelegramButtons(
-            chatId, "👋 Hola " + user.getNameUser() + "! ¿Qué deseas hacer?", telegramClient, teclado);
+            chatId, "👋 Hello " + user.getNameUser() + "! What would you like to do?", telegramClient, teclado);
     }
 
     public void fnDone() {
         if (exit) return;
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero. Usa /login", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
             exit = true;
             return;
         }
@@ -217,7 +218,7 @@ public class BotActions {
     public void fnUndo() {
         if (exit) return;
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero. Usa /login", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
             exit = true;
             return;
         }
@@ -241,7 +242,7 @@ public class BotActions {
     public void fnDelete() {
         if (exit) return;
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero. Usa /login", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
             exit = true;
             return;
         }
@@ -279,17 +280,17 @@ public class BotActions {
         if (!requestText.trim().equals(BotCommands.LOGIN_COMMAND.getCommand()) || exit) return;
 
         if (userTTService == null) {
-            BotHelper.sendMessageToTelegram(chatId, "El servicio de login no está disponible.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "The login service is not available.", telegramClient, null);
             exit = true;
             return;
         }
 
-        logger.info("Login iniciado para chatId: {} identity: {}", chatId, telegramIdentity);
+        logger.info("Login started for chatId: {} identity: {}", chatId, telegramIdentity);
 
         Optional<UserTT> userOp = userTTService.getUserByTelegram(telegramIdentity);
         if (!userOp.isPresent()) {
             BotHelper.sendMessageToTelegram(chatId,
-                "⚠️ Aún no estás registrado en el sistema. Por favor contacta a tu administrador para que te registre.",
+                "⚠️ You are not yet registered in the system. Please contact your administrator to register you.",
                 telegramClient, null);
             exit = true;
             return;
@@ -305,7 +306,7 @@ public class BotActions {
         if (!requestText.trim().equals(BotCommands.REGISTER_COMMAND.getCommand())) return;
 
         if (userTTService == null) {
-            BotHelper.sendMessageToTelegram(chatId, "El servicio de registro no esta disponible.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "The registration service is not available.", telegramClient, null);
             exit = true;
             return;
         }
@@ -391,7 +392,7 @@ public class BotActions {
         BotRegistrationDraft draft = registrationDrafts.get(chatId);
         if (draft == null) {
             clearConversationState();
-            BotHelper.sendMessageToTelegram(chatId, "Error en el registro. Usa /register para empezar de nuevo.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "Error in registration. Use /register to start over.", telegramClient, null);
             exit = true;
             return;
         }
@@ -519,7 +520,7 @@ public class BotActions {
         long pjId;
         if (projects.isEmpty()) {
             ProjectTT seed = new ProjectTT();
-            seed.setNamePj("Proyecto Demo");
+            seed.setNamePj("Demo Project");
             seed.setDateStartPj(LocalDate.now());
             seed.setDateEndSetPj(LocalDate.now().plusMonths(3));
             pjId = projectTTService.addProject(seed).getPjId();
@@ -528,7 +529,7 @@ public class BotActions {
         }
 
         SprintTT s1 = new SprintTT();
-        s1.setNameSprint("Sprint 1: Configuracion");
+        s1.setNameSprint("Sprint 1: Setup");
         s1.setDateStartSpr(LocalDate.now());
         s1.setDateEndSpr(LocalDate.now().plusWeeks(2));
         s1.setTaskGoal(20);
@@ -537,7 +538,7 @@ public class BotActions {
         sprintTTService.addSprint(s1);
 
         SprintTT s2 = new SprintTT();
-        s2.setNameSprint("Sprint 2: Funcionalidades");
+        s2.setNameSprint("Sprint 2: Features");
         s2.setDateStartSpr(LocalDate.now().plusWeeks(2));
         s2.setDateEndSpr(LocalDate.now().plusWeeks(4));
         s2.setTaskGoal(25);
@@ -546,7 +547,7 @@ public class BotActions {
         sprintTTService.addSprint(s2);
 
         SprintTT s3 = new SprintTT();
-        s3.setNameSprint("Sprint 3: Pruebas");
+        s3.setNameSprint("Sprint 3: Testing");
         s3.setDateStartSpr(LocalDate.now().plusWeeks(4));
         s3.setDateEndSpr(LocalDate.now().plusWeeks(6));
         s3.setTaskGoal(15);
@@ -576,7 +577,7 @@ public class BotActions {
         BotTaskDraft draft = taskDrafts.get(chatId);
         if (draft == null) {
             clearConversationState();
-            BotHelper.sendMessageToTelegram(chatId, "Error al crear la tarea. Intenta de nuevo con /additem.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "Error creating task. Try again with /additem.", telegramClient, null);
             exit = true;
             return;
         }
@@ -585,7 +586,7 @@ public class BotActions {
 
         SprintTT sprint = sprintTTService.getSprintById(sprintId).getBody();
         if (sprint == null) {
-            BotHelper.sendMessageToTelegram(chatId, "Sprint no encontrado. Selecciona otro.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "Sprint not found. Select another.", telegramClient, null);
             showSprintSelection();
             exit = true;
             return;
@@ -605,7 +606,7 @@ public class BotActions {
             sprintTaskTTService.addTaskToSprint(sprintId, saved.getTaskId());
         } catch (Exception e) {
             logger.error("Error saving task: {}", e.getMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, "Error al guardar la tarea. Intenta de nuevo.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "Error saving task. Try again.", telegramClient, null);
             exit = true;
             return;
         }
@@ -621,7 +622,7 @@ public class BotActions {
     public void fnListAll() {
         if (exit) return;
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero. Usa /login", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
             exit = true;
             return;
         }
@@ -635,10 +636,10 @@ public class BotActions {
         List<TaskTT> tasks = taskTTService.getTasksByUserInActiveSprint(user.getUserId());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📋 *Mis tareas — Sprint activo*\n\n");
+        sb.append("📋 MY TASKS - ACTIVE SPRINT\n\n");
 
         if (tasks.isEmpty()) {
-            sb.append("No tienes tareas en el sprint activo.");
+            sb.append("You have no tasks in the active sprint.");
         } else {
             List<TaskTT> pending = tasks.stream()
                 .filter(t -> t.getDateEndRealTask() == null).collect(Collectors.toList());
@@ -646,24 +647,32 @@ public class BotActions {
                 .filter(t -> t.getDateEndRealTask() != null).collect(Collectors.toList());
 
             if (!pending.isEmpty()) {
-                sb.append("⏳ *Pendientes*\n");
+                sb.append("⏳ *PENDING TASKS*\n");
+                String[] pHeaders = {"PRIO", "TASK", "SP", "DUE DATE"};
+                List<String[]> pRows = new ArrayList<>();
                 for (TaskTT t : pending) {
-                    String prioEmoji = "high".equals(t.getPriority()) ? "🔴"
-                        : "medium".equals(t.getPriority()) ? "🟡" : "🟢";
-                    sb.append(prioEmoji).append(" ").append(t.getNameTask())
-                      .append(" — ").append(t.getStoryPoints()).append(" SP")
-                      .append(" | Fecha límite: ").append(t.getDateEndSetTask())
-                      .append("\n");
+                    String prio = "high".equals(t.getPriority()) ? "HIGH"
+                        : "medium".equals(t.getPriority()) ? "MED" : "LOW";
+                    String name = wrap(t.getNameTask() != null ? t.getNameTask() : "-", 15);
+                    String sp   = t.getStoryPoints() != null ? t.getStoryPoints() + " SP" : "-";
+                    String date = t.getDateEndSetTask() != null
+                        ? t.getDateEndSetTask().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-";
+                    pRows.add(new String[]{prio, name, sp, date});
                 }
+                sb.append(buildTable(pHeaders, pRows)).append("\n");
             }
 
             if (!done.isEmpty()) {
-                sb.append("\n✅ *Completadas*\n");
+                sb.append("✅ *COMPLETED TASKS*\n");
+                String[] dHeaders = {"TASK", "DELIVERED"};
+                List<String[]> dRows = new ArrayList<>();
                 for (TaskTT t : done) {
-                    sb.append("• ").append(t.getNameTask())
-                      .append(" — entregada: ").append(t.getDateEndRealTask())
-                      .append("\n");
+                    String name = wrap(t.getNameTask() != null ? t.getNameTask() : "-", 25);
+                    String date = t.getDateEndRealTask() != null
+                        ? t.getDateEndRealTask().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-";
+                    dRows.add(new String[]{name, date});
                 }
+                sb.append(buildTable(dHeaders, dRows));
             }
         }
 
@@ -675,7 +684,7 @@ public class BotActions {
     public void fnAddItem() {
         if (exit) return;
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero. Usa /login", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
             exit = true;
             return;
         }
@@ -695,7 +704,7 @@ public class BotActions {
         if (exit) return;
         BotHelper.sendMessageToTelegram(
             chatId,
-            "Selecciona una opcion valida, usa /additem para agregar una tarea o /register para registrarte.",
+            "Select a valid option, use /additem to add a task or /register to register.",
             telegramClient,
             null
         );
@@ -707,17 +716,17 @@ public class BotActions {
         if (!requestText.contains(BotCommands.LLM_REQ.getCommand()) || exit) return;
 
         if (deepSeekService == null) {
-            BotHelper.sendMessageToTelegram(chatId, "La funcion LLM esta desactivada.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "The LLM function is disabled.", telegramClient, null);
             exit = true;
             return;
         }
 
         String out;
         try {
-            out = deepSeekService.generateText("Dame los datos del clima en mty");
+            out = deepSeekService.generateText("Give me the weather data in mty");
         } catch (Exception exc) {
             logger.error(exc.getLocalizedMessage(), exc);
-            out = "No se pudo consultar el servicio LLM.";
+            out = "Could not consult the LLM service.";
         }
         BotHelper.sendMessageToTelegram(chatId, "LLM: " + out, telegramClient, null);
         exit = true;
@@ -728,7 +737,7 @@ public class BotActions {
         if (!requestText.trim().equals(BotCommands.STATUS.getCommand())) return;
 
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero. Usa /login", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
             exit = true;
             return;
         }
@@ -737,17 +746,17 @@ public class BotActions {
         List<TaskTT> tasks = taskTTService.getTasksByUserInActiveSprint(user.getUserId());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📊 *Progreso — Sprint activo*\n\n");
+        sb.append("📊 PROGRESS - ACTIVE SPRINT\n\n");
 
         if (tasks.isEmpty()) {
-            sb.append("No tienes tareas en el sprint activo.");
+            sb.append("You have no tasks in the active sprint.");
         } else {
             long done    = tasks.stream().filter(t -> t.getDateEndRealTask() != null).count();
             long pending = tasks.stream().filter(t -> t.getDateEndRealTask() == null).count();
-            sb.append("✅ Completadas: ").append(done).append("\n");
-            sb.append("⏳ Pendientes:  ").append(pending).append("\n");
+            sb.append("✅ Completed: ").append(done).append("\n");
+            sb.append("⏳ Pending:  ").append(pending).append("\n");
             sb.append("📦 Total:       ").append(tasks.size());
-            if (pending == 0) sb.append("\n\n🎉 ¡Todas tus tareas están completadas!");
+            if (pending == 0) sb.append("\n\n🎉 All your tasks are completed!");
         }
 
         BotHelper.sendMessageToTelegram(chatId, sb.toString(), telegramClient, null);
@@ -760,7 +769,7 @@ public class BotActions {
         if (!requestText.trim().equals(BotCommands.MARK_DONE.getCommand())) return;
 
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first.", telegramClient, null);
             exit = true;
             return;
         }
@@ -771,11 +780,25 @@ public class BotActions {
             .collect(Collectors.toList());
 
         if (pending.isEmpty()) {
-            BotHelper.sendMessageToTelegram(chatId, "✅ No tienes tareas pendientes.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "✅ You have no pending tasks.", telegramClient, null);
             showMainMenu();
             exit = true;
             return;
         }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("SELECT A TASK TO MARK AS DONE:\n\n");
+        sb.append("```\n");
+        for (int i = 0; i < pending.size(); i++) {
+            TaskTT t = pending.get(i);
+            String prioEmoji = "high".equals(t.getPriority()) ? "🔴 HIGH"
+                : "medium".equals(t.getPriority()) ? "🟡 MED" : "🟢 LOW";
+            String taskName = t.getNameTask();
+            String sp = String.format("%2d", t.getStoryPoints());
+            sb.append(prioEmoji).append(" | ").append(taskName).append(" | ")
+              .append(sp).append(" SP\n");
+        }
+        sb.append("```\n");
 
         var builder = InlineKeyboardMarkup.builder();
         for (TaskTT t : pending) {
@@ -788,7 +811,7 @@ public class BotActions {
                     .build()
             ));
         }
-        BotHelper.sendMessageToTelegramButtons(chatId, "Selecciona la tarea que completaste:", telegramClient, builder.build());
+        BotHelper.sendMessageToTelegramButtons(chatId, sb.toString(), telegramClient, builder.build());
         exit = true;
     }
 
@@ -797,7 +820,7 @@ public class BotActions {
         if (!requestText.startsWith("DONE_TASK:")) return;
 
         if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Debes iniciar sesión primero.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first.", telegramClient, null);
             exit = true;
             return;
         }
@@ -806,14 +829,14 @@ public class BotActions {
         try {
             taskId = Long.parseLong(requestText.substring(10));
         } catch (NumberFormatException e) {
-            BotHelper.sendMessageToTelegram(chatId, "Tarea inválida.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "Invalid task.", telegramClient, null);
             exit = true;
             return;
         }
 
         TaskTT task = taskTTService.getTaskById(taskId).getBody();
         if (task == null || task.getUserId() != getAuthenticatedUser().getUserId()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ Tarea no encontrada o no te pertenece.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "❌ Task not found or does not belong to you.", telegramClient, null);
             exit = true;
             return;
         }
@@ -829,11 +852,66 @@ public class BotActions {
                 st.getId().getSprId(), taskId, "done"));
 
         boolean onTime = !LocalDate.now().isAfter(task.getDateEndSetTask());
-        String resultado = onTime ? "⏱ entregada a tiempo!" : "⚠️ entregada con retraso.";
+        String resultado = onTime ? "⏱ delivered on time!" : "⚠️ delivered late.";
         BotHelper.sendMessageToTelegram(
-            chatId, "✅ *" + task.getNameTask() + "* completada — " + resultado, telegramClient, null);
+            chatId, "✅ " + task.getNameTask() + " completed - " + resultado, telegramClient, null);
 
         showMainMenu();
         exit = true;
+    }
+
+    private String buildTable(String[] headers, List<String[]> rows) {
+        int cols = headers.length;
+        int[] widths = new int[cols];
+        for (int i = 0; i < cols; i++) widths[i] = headers[i].length();
+        for (String[] row : rows)
+            for (int i = 0; i < cols; i++)
+                for (String line : row[i].split("\n", -1))
+                    widths[i] = Math.max(widths[i], line.length());
+
+        StringBuilder t = new StringBuilder("```\n");
+        for (int i = 0; i < cols; i++) {
+            t.append(padRight(headers[i], widths[i]));
+            if (i < cols - 1) t.append(" | ");
+        }
+        t.append("\n");
+        for (int i = 0; i < cols; i++) {
+            t.append("-".repeat(widths[i]));
+            if (i < cols - 1) t.append("-+-");
+        }
+        t.append("\n");
+        for (String[] row : rows) {
+            String[][] cellLines = new String[cols][];
+            int maxLines = 1;
+            for (int i = 0; i < cols; i++) {
+                cellLines[i] = row[i].split("\n", -1);
+                maxLines = Math.max(maxLines, cellLines[i].length);
+            }
+            for (int l = 0; l < maxLines; l++) {
+                for (int i = 0; i < cols; i++) {
+                    String cell = l < cellLines[i].length ? cellLines[i][l] : "";
+                    t.append(padRight(cell, widths[i]));
+                    if (i < cols - 1) t.append(" | ");
+                }
+                t.append("\n");
+            }
+        }
+        t.append("```\n");
+        return t.toString();
+    }
+
+    private String padRight(String s, int n) {
+        return String.format("%-" + n + "s", s);
+    }
+
+    private String wrap(String s, int max) {
+        if (s.length() <= max) return s;
+        StringBuilder sb = new StringBuilder();
+        while (s.length() > max) {
+            sb.append(s, 0, max).append("\n");
+            s = s.substring(max);
+        }
+        sb.append(s);
+        return sb.toString();
     }
 }
