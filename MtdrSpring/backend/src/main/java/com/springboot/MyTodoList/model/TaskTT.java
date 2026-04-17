@@ -92,6 +92,9 @@ public class TaskTT {
     @Column(name = "PRIORITY", length = 30)
     private String priority;
 
+    @Column(name = "INFO_TASK", length = 2000)
+    private String infoTask;
+
     /*
      * The user currently assigned to this task.
      * Before reassigning, TaskTTService.safeAssignTask() verifies
@@ -115,7 +118,7 @@ public class TaskTT {
     /** Full constructor for programmatic task creation. */
     public TaskTT(long taskId, String nameTask, Integer storyPoints,
                   LocalDate dateStartTask, LocalDate dateEndSetTask,
-                  LocalDate dateEndRealTask, String priority,
+                  LocalDate dateEndRealTask, String priority, String infoTask,
                   long userId, long pjId) {
         this.taskId          = taskId;
         this.nameTask        = nameTask;
@@ -124,6 +127,7 @@ public class TaskTT {
         this.dateEndSetTask  = dateEndSetTask;
         this.dateEndRealTask = dateEndRealTask;
         this.priority        = priority;
+        this.infoTask        = infoTask;
         this.userId          = userId;
         this.pjId            = pjId;
     }
@@ -150,6 +154,9 @@ public class TaskTT {
 
     public String getPriority()                     { return priority; }
     public void setPriority(String priority)        { this.priority = priority; }
+
+    public String getInfoTask()                     { return infoTask; }
+    public void setInfoTask(String infoTask)        { this.infoTask = infoTask; }
 
     public long getUserId()                         { return userId; }
     public void setUserId(long userId)              { this.userId = userId; }
