@@ -33,6 +33,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+**/node_modules/**
+**/build/**
+**/target/**
+
 # misc
 .DS_Store
 .env
