@@ -166,6 +166,16 @@ public class BotActions {
                 InlineKeyboardButton.builder()
                     .text("✅ Complete Task")
                     .callbackData(BotCommands.MARK_DONE.getCommand())
+                    .build(),
+                InlineKeyboardButton.builder()
+                    .text("↩️ Reopen Task")
+                    .callbackData(BotCommands.MARK_UNDO.getCommand())
+                    .build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("✏️ Edit Task")
+                    .callbackData(BotCommands.EDIT_TASK.getCommand())
                     .build()
             ))
             .keyboardRow(new InlineKeyboardRow(
@@ -192,27 +202,7 @@ public class BotActions {
     }
 
     public void fnDone() {
-        if (exit) return;
-        if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
-            exit = true;
-            return;
-        }
-        
-        if (!requestText.contains(BotLabels.DONE.getLabel())) return;
-
-        String done = requestText.substring(0, requestText.indexOf(BotLabels.DASH.getLabel()));
-        Integer id = Integer.valueOf(done);
-        try {
-            ToDoItem item = todoService.getToDoItemById(id);
-            item.setDone(true);
-            todoService.updateToDoItem(id, item);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DONE.getMessage(), telegramClient);
-            showMainMenu();  // ← Mostrar menú principal
-        } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
-        }
-        exit = true;
+        // Handled by fnMarkTaskDone() via DONE_TASK:{id} callback — this method is a no-op.
     }
 
     public void fnUndo() {
@@ -222,43 +212,83 @@ public class BotActions {
             exit = true;
             return;
         }
-        
-        if (!requestText.contains(BotLabels.UNDO.getLabel())) return;
 
-        String undo = requestText.substring(0, requestText.indexOf(BotLabels.DASH.getLabel()));
-        Integer id = Integer.valueOf(undo);
-        try {
-            ToDoItem item = todoService.getToDoItemById(id);
-            item.setDone(false);
-            todoService.updateToDoItem(id, item);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_UNDONE.getMessage(), telegramClient);
-            showMainMenu();  // ← Mostrar menú principal
-        } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+        String cmd = requestText.trim();
+        if (!cmd.equals(BotCommands.MARK_UNDO.getCommand())
+                && !cmd.equals(BotCommands.MARK_REWORK.getCommand())) return;
+
+        UserTT user = getAuthenticatedUser();
+        List<TaskTT> completed = taskTTService.getTasksByUserInActiveSprint(user.getUserId()).stream()
+            .filter(t -> t.getDateEndRealTask() != null)
+            .collect(Collectors.toList());
+
+        if (completed.isEmpty()) {
+            BotHelper.sendMessageToTelegram(chatId, "↩️ You have no completed tasks to reopen.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
         }
+
+        var builder = InlineKeyboardMarkup.builder();
+        for (TaskTT t : completed) {
+            String label = prioEmoji(t.getPriority()) + " " + t.getNameTask()
+                + " (" + t.getStoryPoints() + " SP)";
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text(label)
+                    .callbackData("UNDO_TASK:" + t.getTaskId())
+                    .build()
+            ));
+        }
+        BotHelper.sendMessageToTelegramButtons(
+            chatId, "↩️ Select a task to reopen:", telegramClient, builder.build());
+        exit = true;
+    }
+
+    public void fnMarkTaskUndo() {
+        if (exit) return;
+        if (!requestText.startsWith("UNDO_TASK:")) return;
+
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        long taskId;
+        try {
+            taskId = Long.parseLong(requestText.substring(10));
+        } catch (NumberFormatException e) {
+            BotHelper.sendMessageToTelegram(chatId, "Invalid task.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        TaskTT task = taskTTService.getTaskById(taskId).getBody();
+        if (task == null || task.getUserId() != getAuthenticatedUser().getUserId()) {
+            BotHelper.sendMessageToTelegram(
+                chatId, "❌ Task not found or does not belong to you.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        task.setDateEndRealTask(null);
+        taskTTService.updateTask(taskId, task);
+
+        sprintTaskTTService.getSprintsForTask(taskId).stream()
+            .filter(st -> "done".equals(st.getStateTask()))
+            .findFirst()
+            .ifPresent(st -> sprintTaskTTService.updateTaskState(
+                st.getId().getSprId(), taskId, "active"));
+
+        BotHelper.sendMessageToTelegram(
+            chatId, "↩️ " + task.getNameTask() + " reopened successfully!", telegramClient, null);
+        showMainMenu();
         exit = true;
     }
 
     public void fnDelete() {
-        if (exit) return;
-        if (!isUserAuthenticated()) {
-            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
-            exit = true;
-            return;
-        }
-        
-        if (!requestText.contains(BotLabels.DELETE.getLabel())) return;
-
-        String delete = requestText.substring(0, requestText.indexOf(BotLabels.DASH.getLabel()));
-        Integer id = Integer.valueOf(delete);
-        try {
-            todoService.deleteToDoItem(id);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DELETED.getMessage(), telegramClient);
-            showMainMenu();
-        } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
-        }
-        exit = true;
+        // fnDelete used the legacy ToDoItem model — no longer supported.
     }
 
     public void fnHide() {
@@ -338,6 +368,11 @@ public class BotActions {
             case WAITING_NEW_ITEM_STORY_POINTS:    handleNewItemStoryPoints();     break;
             case WAITING_NEW_ITEM_PRIORITY:        handleNewItemPriority();        break;
             case WAITING_NEW_ITEM_SPRINT:          handleNewItemSprint();          break;
+            case WAITING_EDIT_TASK_FIELD:          handleEditTaskField();          break;
+            case WAITING_EDIT_TASK_NEW_NAME:       handleEditTaskNewName();        break;
+            case WAITING_EDIT_TASK_NEW_SP:         handleEditTaskNewSP();          break;
+            case WAITING_EDIT_TASK_NEW_PRIORITY:   handleEditTaskNewPriority();    break;
+            case WAITING_EDIT_TASK_NEW_SPRINT:     handleEditTaskNewSprint();      break;
             default: break;
         }
     }
@@ -679,6 +714,279 @@ public class BotActions {
         BotHelper.sendMessageToTelegram(chatId, sb.toString(), telegramClient, null);
         showMainMenu();
         exit = true;
+    }
+
+    // ─── Task edit flow ──────────────────────────────────────────────────
+
+    public void fnShowEditPicker() {
+        if (exit) return;
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        if (!requestText.trim().equals(BotCommands.EDIT_TASK.getCommand())) return;
+
+        UserTT user = getAuthenticatedUser();
+        List<TaskTT> pending = taskTTService.getTasksByUserInActiveSprint(user.getUserId()).stream()
+            .filter(t -> t.getDateEndRealTask() == null)
+            .collect(Collectors.toList());
+
+        if (pending.isEmpty()) {
+            BotHelper.sendMessageToTelegram(chatId, "You have no pending tasks to edit.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        var builder = InlineKeyboardMarkup.builder();
+        for (TaskTT t : pending) {
+            String label = prioEmoji(t.getPriority()) + " " + t.getNameTask()
+                + " (" + t.getStoryPoints() + " SP)";
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text(label)
+                    .callbackData("EDIT_PICK:" + t.getTaskId())
+                    .build()
+            ));
+        }
+        BotHelper.sendMessageToTelegramButtons(
+            chatId, "✏️ Select a task to edit:", telegramClient, builder.build());
+        exit = true;
+    }
+
+    public void fnEditPickTask() {
+        if (exit) return;
+        if (!requestText.startsWith("EDIT_PICK:")) return;
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        long taskId;
+        try {
+            taskId = Long.parseLong(requestText.substring(10));
+        } catch (NumberFormatException e) {
+            BotHelper.sendMessageToTelegram(chatId, "Invalid task.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        BotTaskDraft draft = new BotTaskDraft();
+        draft.setTaskId(taskId);
+        taskDrafts.put(chatId, draft);
+        setCurrentState(BotConversationState.WAITING_EDIT_TASK_FIELD);
+
+        InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("📝 Name").callbackData("EDIT_FIELD:name").build(),
+                InlineKeyboardButton.builder().text("🔢 Story Points").callbackData("EDIT_FIELD:sp").build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("🎯 Priority").callbackData("EDIT_FIELD:priority").build(),
+                InlineKeyboardButton.builder().text("🔄 Sprint").callbackData("EDIT_FIELD:sprint").build()
+            ))
+            .build();
+        BotHelper.sendMessageToTelegramButtons(
+            chatId, "What would you like to edit?", telegramClient, keyboard);
+        exit = true;
+    }
+
+    private void handleEditTaskField() {
+        if (!requestText.startsWith("EDIT_FIELD:")) {
+            showEditFieldButtons();
+            exit = true;
+            return;
+        }
+        String field = requestText.substring(11);
+        switch (field) {
+            case "name":
+                setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_NAME);
+                BotHelper.sendMessageToTelegram(chatId, "📝 Enter the new task name:", telegramClient, null);
+                break;
+            case "sp":
+                setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_SP);
+                BotHelper.sendMessageToTelegram(chatId, "🔢 Enter the new story point value:", telegramClient, null);
+                break;
+            case "priority":
+                setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_PRIORITY);
+                showPriorityButtons();
+                break;
+            case "sprint":
+                setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_SPRINT);
+                showSprintSelection();
+                break;
+            default:
+                BotHelper.sendMessageToTelegram(chatId, "Invalid option.", telegramClient, null);
+        }
+        exit = true;
+    }
+
+    private void showEditFieldButtons() {
+        InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("📝 Name").callbackData("EDIT_FIELD:name").build(),
+                InlineKeyboardButton.builder().text("🔢 Story Points").callbackData("EDIT_FIELD:sp").build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("🎯 Priority").callbackData("EDIT_FIELD:priority").build(),
+                InlineKeyboardButton.builder().text("🔄 Sprint").callbackData("EDIT_FIELD:sprint").build()
+            ))
+            .build();
+        BotHelper.sendMessageToTelegramButtons(chatId, "Please select what to edit:", telegramClient, keyboard);
+    }
+
+    private void handleEditTaskNewName() {
+        BotTaskDraft draft = taskDrafts.get(chatId);
+        if (draft == null || draft.getTaskId() == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error. Please try again with /edittask.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        TaskTT task = taskTTService.getTaskById(draft.getTaskId()).getBody();
+        if (task == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Task not found.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        task.setNameTask(requestText.trim());
+        taskTTService.updateTask(task.getTaskId(), task);
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId, "✅ Task name updated!", telegramClient, null);
+        showMainMenu();
+        exit = true;
+    }
+
+    private void handleEditTaskNewSP() {
+        BotTaskDraft draft = taskDrafts.get(chatId);
+        if (draft == null || draft.getTaskId() == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error. Please try again with /edittask.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        try {
+            int sp = Integer.parseInt(requestText.trim());
+            TaskTT task = taskTTService.getTaskById(draft.getTaskId()).getBody();
+            if (task == null) {
+                clearConversationState();
+                BotHelper.sendMessageToTelegram(chatId, "Task not found.", telegramClient, null);
+                exit = true;
+                return;
+            }
+            task.setStoryPoints(sp);
+            taskTTService.updateTask(task.getTaskId(), task);
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "✅ Story points updated!", telegramClient, null);
+            showMainMenu();
+        } catch (NumberFormatException e) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_STORY_POINTS.getMessage(), telegramClient, null);
+        }
+        exit = true;
+    }
+
+    private void handleEditTaskNewPriority() {
+        if (!requestText.startsWith("PRIO:")) {
+            showPriorityButtons();
+            exit = true;
+            return;
+        }
+        String priority = requestText.substring(5);
+        if (!priority.equals("low") && !priority.equals("medium") && !priority.equals("high")) {
+            showPriorityButtons();
+            exit = true;
+            return;
+        }
+        BotTaskDraft draft = taskDrafts.get(chatId);
+        if (draft == null || draft.getTaskId() == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error. Please try again with /edittask.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        TaskTT task = taskTTService.getTaskById(draft.getTaskId()).getBody();
+        if (task == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Task not found.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        task.setPriority(priority);
+        taskTTService.updateTask(task.getTaskId(), task);
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId, "✅ Priority updated to " + prioEmoji(priority) + "!", telegramClient, null);
+        showMainMenu();
+        exit = true;
+    }
+
+    private void handleEditTaskNewSprint() {
+        if (!requestText.startsWith("SPRINT:")) {
+            showSprintSelection();
+            exit = true;
+            return;
+        }
+
+        long newSprintId;
+        try {
+            newSprintId = Long.parseLong(requestText.substring(7));
+        } catch (NumberFormatException e) {
+            showSprintSelection();
+            exit = true;
+            return;
+        }
+
+        BotTaskDraft draft = taskDrafts.get(chatId);
+        if (draft == null || draft.getTaskId() == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error. Please try again with /edittask.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        TaskTT task = taskTTService.getTaskById(draft.getTaskId()).getBody();
+        SprintTT newSprint = sprintTTService.getSprintById(newSprintId).getBody();
+        if (task == null || newSprint == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Task or sprint not found.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        // Remove from current sprint(s) and add to the new one
+        List<com.springboot.MyTodoList.model.SprintTaskTT> currentSprints =
+            sprintTaskTTService.getSprintsForTask(task.getTaskId());
+
+        try {
+            for (com.springboot.MyTodoList.model.SprintTaskTT st : currentSprints) {
+                sprintTaskTTService.removeTaskFromSprint(st.getId().getSprId(), task.getTaskId());
+            }
+            sprintTaskTTService.addTaskToSprint(newSprintId, task.getTaskId());
+        } catch (Exception e) {
+            logger.error("Error moving task to sprint: {}", e.getMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, "Error moving task to sprint. Try again.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        // Sync task dates with the new sprint to keep KPI calculations consistent
+        task.setDateStartTask(newSprint.getDateStartSpr());
+        task.setDateEndSetTask(newSprint.getDateEndSpr());
+        taskTTService.updateTask(task.getTaskId(), task);
+
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(
+            chatId, "🔄 Task moved to *" + newSprint.getNameSprint() + "* successfully!", telegramClient, null);
+        showMainMenu();
+        exit = true;
+    }
+
+    private String prioEmoji(String priority) {
+        if ("high".equals(priority)) return "🔴";
+        if ("medium".equals(priority)) return "🟡";
+        return "🟢";
     }
 
     public void fnAddItem() {

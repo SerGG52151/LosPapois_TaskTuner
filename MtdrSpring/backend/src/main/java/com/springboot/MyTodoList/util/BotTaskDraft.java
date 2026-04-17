@@ -4,6 +4,7 @@ public class BotTaskDraft {
     private String name;
     private Integer storyPoints;
     private String priority;
+    private Long taskId;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -13,4 +14,7 @@ public class BotTaskDraft {
 
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
+
+    public Long getTaskId() { return taskId; }
+    public void setTaskId(Long taskId) { this.taskId = taskId; }
 }

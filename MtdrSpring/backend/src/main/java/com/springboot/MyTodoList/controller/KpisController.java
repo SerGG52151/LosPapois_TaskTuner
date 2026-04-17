@@ -32,6 +32,11 @@ public class KpisController {
 
     // ─── Nivel proyecto ───────────────────────────────────────────────────────
 
+    @GetMapping("/projects/{pjId}/kpis/project-velocity")
+    public ResponseEntity<Map<String, Object>> getProjectVelocityMetric(@PathVariable long pjId) {
+        return ResponseEntity.ok(kpisService.getProjectVelocityMetric(pjId));
+    }
+
     @GetMapping("/projects/{pjId}/kpis/velocity")
     public ResponseEntity<List<Map<String, Object>>> getVelocityByProject(@PathVariable long pjId) {
         return ResponseEntity.ok(kpisService.getVelocityByProject(pjId));

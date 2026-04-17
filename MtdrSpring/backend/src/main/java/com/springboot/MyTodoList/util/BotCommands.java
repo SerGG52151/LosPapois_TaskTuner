@@ -11,6 +11,8 @@ public enum BotCommands {
 	STATUS("/status"),
 	MARK_DONE("/done"),
 	MARK_REWORK("/rework"),
+	MARK_UNDO("/undo"),
+	EDIT_TASK("/edittask"),
 	LLM_REQ("/llm");
 
 	private final String command;

@@ -119,9 +119,12 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         actions.fnPendingConversation();
         actions.fnShowDonePicker();
         actions.fnMarkTaskDone();
+        actions.fnUndo();
+        actions.fnMarkTaskUndo();
+        actions.fnShowEditPicker();
+        actions.fnEditPickTask();
         actions.fnStatus();
         actions.fnDone();
-        actions.fnUndo();
         actions.fnDelete();
         actions.fnListAll();
         actions.fnAddItem();

@@ -17,6 +17,14 @@ public class KpisService {
 
     // ─── Por proyecto ─────────────────────────────────────────────────────────
 
+    public Map<String, Object> getProjectVelocityMetric(long pjId) {
+        Object[] row = kpisRepository.getProjectVelocityMetric(pjId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("sprints_finalizados", row[0]);
+        result.put("velocidad_promedio",  row[1]);
+        return result;
+    }
+
     public List<Map<String, Object>> getVelocityByProject(long pjId) {
         return mapVelocity(kpisRepository.getVelocityByProject(pjId));
     }
@@ -59,6 +67,7 @@ public class KpisService {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("sprint",             row[0]);
             map.put("tareas_completadas", row[1]);
+            map.put("puntos_ponderados",  row[2]);
             result.add(map);
         }
         return result;
@@ -68,10 +77,10 @@ public class KpisService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] row : rows) {
             Map<String, Object> map = new LinkedHashMap<>();
-            map.put("sprint",      row[0]);
-            map.put("arrastradas", row[1]);
-            map.put("total",       row[2]);
-            map.put("tasa",        row[3]);
+            map.put("sprint",          row[0]);
+            map.put("pts_arrastrados", row[1]);
+            map.put("pts_total",       row[2]);
+            map.put("tasa_ponderada",  row[3]);
             result.add(map);
         }
         return result;
@@ -81,9 +90,10 @@ public class KpisService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] row : rows) {
             Map<String, Object> map = new LinkedHashMap<>();
-            map.put("nombre",         row[0]);
-            map.put("rol",            row[1]);
-            map.put("tareas_activas", row[2]);
+            map.put("nombre",          row[0]);
+            map.put("rol",             row[1]);
+            map.put("tareas_activas",  row[2]);
+            map.put("carga_ponderada", row[3]);
             result.add(map);
         }
         return result;
@@ -93,10 +103,10 @@ public class KpisService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Object[] row : rows) {
             Map<String, Object> map = new LinkedHashMap<>();
-            map.put("sprint",      row[0]);
-            map.put("completadas", row[1]);
-            map.put("planeadas",   row[2]);
-            map.put("pct",         row[3]);
+            map.put("sprint",          row[0]);
+            map.put("pts_completados", row[1]);
+            map.put("pts_planeados",   row[2]);
+            map.put("pct_ponderado",   row[3]);
             result.add(map);
         }
         return result;
