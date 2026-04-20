@@ -22,15 +22,15 @@ type Sprint = {
 };
 
 const mockProjects: Project[] = [
-  { id: 1, name: 'Sistema de Gestión de Inventario' },
-  { id: 2, name: 'App de Delivery' },
-  { id: 3, name: 'Portal de Clientes' },
+  { id: 1, name: 'Inventory Management System' },
+  { id: 2, name: 'Delivery App' },
+  { id: 3, name: 'Customer Portal' },
 ];
 
 const mockSprint: Sprint = {
   id: 3,
   name: 'Sprint 3',
-  endDate: '4 abr 2026',
+  endDate: 'Apr 4, 2026',
   taskCount: 12,
 };
 
@@ -40,17 +40,17 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-gray-900">Crear Nuevo Proyecto</h2>
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl shadow-brand-dark/30">
+        <h2 className="text-2xl font-bold text-gray-900">Create New Project</h2>
 
         <div className="mt-6 space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700">
-              Nombre del Proyecto
+              Project Name
             </label>
             <input
               type="text"
-              placeholder="Ej: Sistema de Gestión"
+              placeholder="E.g.: Management System"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-800 placeholder-gray-400 outline-none focus:border-brand focus:ring-2 focus:ring-brand-lighter"
@@ -59,11 +59,11 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
 
           <div>
             <label className="block text-sm font-semibold text-gray-700">
-              Fecha Esperada de Fin
+              Expected End Date
             </label>
             <input
               type="text"
-              placeholder="dd/mm/aaaa"
+              placeholder="dd/mm/yyyy"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-800 placeholder-gray-400 outline-none focus:border-brand focus:ring-2 focus:ring-brand-lighter"
@@ -76,13 +76,13 @@ function NewProjectModal({ onClose }: { onClose: () => void }) {
             onClick={onClose}
             className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-base font-semibold text-gray-700 hover:bg-gray-50"
           >
-            Cancelar
+            Cancel
           </button>
           <button
             onClick={onClose}
             className="flex-1 rounded-xl bg-brand py-3 text-base font-semibold text-white shadow-md shadow-brand/25 hover:bg-brand-dark"
           >
-            Crear Proyecto
+            Create Project
           </button>
         </div>
       </div>
@@ -102,20 +102,20 @@ function NewSprintModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl">
-        <h2 className="text-2xl font-bold text-gray-900">Iniciar Nuevo Sprint</h2>
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl shadow-brand-dark/30">
+        <h2 className="text-2xl font-bold text-gray-900">Start New Sprint</h2>
 
         <p className="mt-3 text-base text-gray-500">
-          Se finalizará el {currentSprint.name} y se iniciará el Sprint {nextSprintNumber}.
+          {currentSprint.name} will end and Sprint {nextSprintNumber} will begin.
         </p>
 
         <div className="mt-6">
           <label className="block text-sm font-semibold text-gray-700">
-            Duración del Sprint (días)
+            Sprint Duration (days)
           </label>
           <input
             type="number"
-            placeholder="Ej: 14"
+            placeholder="E.g.: 14"
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
             className="mt-2 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-800 placeholder-gray-400 outline-none focus:border-brand focus:ring-2 focus:ring-brand-lighter"
@@ -127,13 +127,13 @@ function NewSprintModal({
             onClick={onClose}
             className="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-base font-semibold text-gray-700 hover:bg-gray-50"
           >
-            Cancelar
+            Cancel
           </button>
           <button
             onClick={onClose}
             className="flex-1 rounded-xl bg-brand py-3 text-base font-semibold text-white shadow-md shadow-brand/25 hover:bg-brand-dark"
           >
-            Iniciar Sprint
+            Start Sprint
           </button>
         </div>
       </div>
@@ -166,7 +166,7 @@ export default function ProjectsPage() {
           <div className="relative flex-1 max-w-2xl" ref={dropdownRef}>
             <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
-              className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-3.5 text-left text-lg font-semibold text-gray-800 shadow-sm hover:shadow-md"
+              className="flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-3.5 text-left text-lg font-semibold text-gray-800 shadow-md shadow-brand/10 hover:shadow-lg hover:shadow-brand/15 transition-shadow"
             >
               {selectedProject.name}
               <ChevronDownIcon
@@ -175,7 +175,7 @@ export default function ProjectsPage() {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute z-20 mt-2 w-full rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
+              <div className="absolute z-20 mt-2 w-full rounded-xl border border-gray-100 bg-white py-2 shadow-xl shadow-brand-dark/15">
                 {mockProjects.map((project) => (
                   <button
                     key={project.id}
@@ -202,26 +202,26 @@ export default function ProjectsPage() {
               className="flex items-center gap-2 rounded-xl bg-brand px-5 py-3 text-base font-semibold text-white shadow-md shadow-brand/25 hover:bg-brand-dark"
             >
               <PlusIcon className="size-5" />
-              Nuevo Proyecto
+              New Project
             </button>
             <button className="flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-base font-semibold text-white shadow-md shadow-orange-500/25 hover:bg-orange-600">
               <XCircleIcon className="size-5" />
-              Finalizar Proyecto
+              End Project
             </button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-sm">
+        <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-lg shadow-brand/10">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{mockSprint.name}</h2>
             <div className="mt-2 flex items-center gap-6 text-sm text-gray-500">
               <span className="flex items-center gap-1.5">
                 <CalendarDaysIcon className="size-4" />
-                Finaliza: {mockSprint.endDate}
+                Ends: {mockSprint.endDate}
               </span>
               <span className="flex items-center gap-1.5">
                 <ChartBarIcon className="size-4" />
-                {mockSprint.taskCount} tareas
+                {mockSprint.taskCount} tasks
               </span>
             </div>
           </div>
@@ -231,20 +231,20 @@ export default function ProjectsPage() {
             className="flex items-center gap-2 rounded-xl bg-brand px-5 py-3 text-base font-semibold text-white shadow-md shadow-brand/25 hover:bg-brand-dark"
           >
             <PlayCircleIcon className="size-5" />
-            Iniciar Nuevo Sprint
+            Start New Sprint
           </button>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div className="rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-lg shadow-brand/10 hover:shadow-xl hover:shadow-brand/15 transition-shadow">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500">Progreso del Sprint</span>
+              <span className="text-sm font-medium text-gray-500">Sprint Progress</span>
               <span className="flex size-9 items-center justify-center rounded-lg bg-brand-lighter">
                 <ChartBarIcon className="size-5 text-brand" />
               </span>
             </div>
             <p className="mt-2 text-4xl font-bold text-gray-900">42%</p>
-            <p className="mt-1 text-sm text-gray-500">5 de 12 tareas completadas</p>
+            <p className="mt-1 text-sm text-gray-500">5 of 12 tasks completed</p>
 
             <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-gray-100">
               <div
@@ -254,15 +254,15 @@ export default function ProjectsPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-sm">
+          <div className="rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-lg shadow-brand/10 hover:shadow-xl hover:shadow-brand/15 transition-shadow">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-500">Tiempo de Ciclo</span>
+              <span className="text-sm font-medium text-gray-500">Cycle Time</span>
               <span className="flex size-9 items-center justify-center rounded-lg bg-brand-lighter">
                 <ClockIcon className="size-5 text-secondary" />
               </span>
             </div>
-            <p className="mt-2 text-4xl font-bold text-gray-900">2.8 días</p>
-            <p className="mt-1 text-sm text-gray-500">Promedio por tarea completada</p>
+            <p className="mt-2 text-4xl font-bold text-gray-900">2.8 days</p>
+            <p className="mt-1 text-sm text-gray-500">Average per completed task</p>
           </div>
         </div>
 

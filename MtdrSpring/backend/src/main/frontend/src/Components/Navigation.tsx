@@ -3,10 +3,10 @@ import { Bars3Icon, XMarkIcon, ArrowRightStartOnRectangleIcon } from '@heroicons
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const navigation = [
-  { name: 'Tareas', href: '/tasks' },
-  { name: 'Proyectos', href: '/projects' },
-  { name: 'Equipo', href: '/team' },
-  { name: 'Perfil', href: '/profile' },
+  { name: 'Tasks', href: '/tasks' },
+  { name: 'Projects', href: '/projects' },
+  { name: 'Team', href: '/team' },
+  { name: 'Profile', href: '/profile' },
 ]
 
 function classNames(...classes: Array<string | false | null | undefined>) {
@@ -22,7 +22,7 @@ export default function Example() {
   }
 
   return (
-    <Disclosure as="nav" className="relative bg-brand-dark shadow-lg shadow-brand-dark/30 border-b border-brand-dark/40">
+    <Disclosure as="nav" className="relative bg-brand-dark shadow-xl shadow-brand-dark/40 border-b border-brand-dark/40">
       {({ open }) => (
         <>
           <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
@@ -40,7 +40,27 @@ export default function Example() {
               </div>
 
               <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
-                <div className="flex shrink-0 items-center">
+                <div className="flex shrink-0 items-center gap-2">
+                  <svg
+                    viewBox="0 0 32 32"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-8 w-8 text-white drop-shadow-md"
+                    aria-hidden="true"
+                  >
+                    <line x1="12" y1="4" x2="12" y2="8" />
+                    <line x1="20" y1="4" x2="20" y2="8" />
+                    <rect x="6" y="8" width="20" height="17" rx="5" />
+                    <rect x="9.5" y="12" width="13" height="9" rx="3" />
+                    <circle cx="13" cy="16.5" r="1.2" fill="currentColor" />
+                    <circle cx="19" cy="16.5" r="1.2" fill="currentColor" />
+                    <rect x="2.5" y="14" width="3.5" height="6" rx="1.2" />
+                    <rect x="26" y="14" width="3.5" height="6" rx="1.2" />
+                  </svg>
                   <span className="text-2xl font-bold text-white tracking-wide drop-shadow-md">TaskTuner</span>
                 </div>
                 <div className="hidden sm:ml-10 sm:block">
@@ -71,7 +91,7 @@ export default function Example() {
                   className="flex items-center gap-2 rounded-lg px-4 py-2.5 text-base font-medium text-brand-lighter hover:bg-white/10 hover:text-white hover:shadow-md hover:shadow-brand-dark/20 backdrop-blur-sm"
                 >
                   <ArrowRightStartOnRectangleIcon aria-hidden="true" className="size-6" />
-                  Cerrar Sesión
+                  Log Out
                 </button>
               </div>
             </div>

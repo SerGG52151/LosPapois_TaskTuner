@@ -53,12 +53,12 @@ export default function useSignup(): UseSignupReturn {
       } else {
         const errorData = await response.json();
         if (isMountedRef.current) {
-          setError(errorData.error || 'Error al registrarse');
+          setError(errorData.error || 'Registration failed');
         }
       }
     } catch (err) {
       if (isMountedRef.current) {
-        setError('Error al conectar con el servidor');
+        setError('Error connecting to the server');
         console.error('Signup error:', err);
       }
     } finally {

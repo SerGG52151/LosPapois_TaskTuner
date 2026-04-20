@@ -20,7 +20,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState<ProfileData>({
     name: 'tum tum sahur',
-    role: 'Gestor de Proyecto',
+    role: 'Project Manager',
     email: 'tripe@t.com',
     telegramId: '@manager',
   });
@@ -56,7 +56,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-xl shadow-brand/15 border border-gray-200 overflow-hidden">
         <div className="bg-brand-dark px-8 py-10 flex items-center gap-6">
           <div className="bg-white rounded-full p-3">
             <UserCircleIcon className="h-16 w-16 text-brand" />
@@ -69,20 +69,20 @@ export default function ProfilePage() {
 
         <div className="px-8 py-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-800">Información del Perfil</h2>
+            <h2 className="text-xl font-semibold text-gray-800">Profile Information</h2>
             {!isEditing && (
               <button
                 onClick={handleEdit}
                 className="px-5 py-2 border-2 border-brand text-brand rounded-full font-medium hover:bg-brand-lighter transition-colors"
               >
-                Editar Perfil
+                Edit Profile
               </button>
             )}
           </div>
 
           <form onSubmit={handleSave} className="space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">Nombre Completo</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">Full Name</label>
               <div className="flex items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
                 <UserCircleIcon className="h-5 w-5 text-gray-400 mr-3 shrink-0" />
                 {isEditing ? (
@@ -99,7 +99,7 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">Correo Electrónico</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">Email</label>
               <div className="flex items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
                 <EnvelopeIcon className="h-5 w-5 text-gray-400 mr-3 shrink-0" />
                 {isEditing ? (
@@ -116,7 +116,7 @@ export default function ProfilePage() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">ID de Telegram</label>
+              <label className="block text-sm font-semibold text-gray-600 mb-1.5">Telegram ID</label>
               <div className="flex items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
                 <ChatBubbleOvalLeftIcon className="h-5 w-5 text-gray-400 mr-3 shrink-0" />
                 {isEditing ? (
@@ -135,11 +135,11 @@ export default function ProfilePage() {
             {isEditing && (
               <>
                 <div className="border-t border-gray-200 pt-5 mt-5">
-                  <h2 className="text-xl font-semibold text-gray-800 mb-5">Cambiar Contraseña</h2>
+                  <h2 className="text-xl font-semibold text-gray-800 mb-5">Change Password</h2>
 
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-600 mb-1.5">Contraseña Actual</label>
+                      <label className="block text-sm font-semibold text-gray-600 mb-1.5">Current Password</label>
                       <div className="flex items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
                         <LockClosedIcon className="h-5 w-5 text-gray-400 mr-3 shrink-0" />
                         <input
@@ -152,7 +152,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-600 mb-1.5">Nueva Contraseña</label>
+                      <label className="block text-sm font-semibold text-gray-600 mb-1.5">New Password</label>
                       <div className="flex items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
                         <LockClosedIcon className="h-5 w-5 text-gray-400 mr-3 shrink-0" />
                         <input
@@ -165,7 +165,7 @@ export default function ProfilePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-600 mb-1.5">Confirmar Nueva Contraseña</label>
+                      <label className="block text-sm font-semibold text-gray-600 mb-1.5">Confirm New Password</label>
                       <div className="flex items-center border border-gray-200 rounded-lg px-4 py-3 bg-gray-50">
                         <LockClosedIcon className="h-5 w-5 text-gray-400 mr-3 shrink-0" />
                         <input
@@ -185,14 +185,14 @@ export default function ProfilePage() {
                     onClick={handleCancel}
                     className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-full font-medium hover:bg-gray-50 transition-colors"
                   >
-                    Cancelar
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     className="flex-1 bg-brand hover:bg-brand-dark text-white py-3 rounded-full font-medium transition-colors flex items-center justify-center gap-2"
                   >
                     <LockClosedIcon className="h-5 w-5" />
-                    Guardar Cambios
+                    Save Changes
                   </button>
                 </div>
               </>

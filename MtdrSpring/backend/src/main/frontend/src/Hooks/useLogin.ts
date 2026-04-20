@@ -44,12 +44,12 @@ export default function useLogin(): UseLoginReturn {
       } else {
         const errorData = await response.json();
         if (isMountedRef.current) {
-          setError(errorData.error || 'Correo o contraseña incorrectos');
+          setError(errorData.error || 'Incorrect email or password');
         }
       }
     } catch (err) {
       if (isMountedRef.current) {
-        setError('Error al conectar con el servidor');
+        setError('Error connecting to the server');
         console.error('Login error:', err);
       }
     } finally {
