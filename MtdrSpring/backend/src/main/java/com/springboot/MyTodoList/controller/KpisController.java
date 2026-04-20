@@ -82,4 +82,21 @@ public class KpisController {
             @PathVariable long pjId, @PathVariable long sprId) {
         return ResponseEntity.ok(kpisService.getCompletitudBySprint(pjId, sprId));
     }
+
+    // ─── Nivel feature ────────────────────────────────────────────────────────
+
+    @GetMapping("/features/{featureId}/kpis/completitud")
+    public ResponseEntity<List<Map<String, Object>>> getCompletitudByFeature(@PathVariable long featureId) {
+        return ResponseEntity.ok(kpisService.getCompletitudByFeature(featureId));
+    }
+
+    @GetMapping("/features/{featureId}/kpis/velocity")
+    public ResponseEntity<List<Map<String, Object>>> getVelocityByFeature(@PathVariable long featureId) {
+        return ResponseEntity.ok(kpisService.getVelocityByFeature(featureId));
+    }
+
+    @GetMapping("/features/{featureId}/kpis/carga-equipo")
+    public ResponseEntity<List<Map<String, Object>>> getCargaByFeature(@PathVariable long featureId) {
+        return ResponseEntity.ok(kpisService.getCargaByFeature(featureId));
+    }
 }

@@ -16,6 +16,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import com.springboot.MyTodoList.config.BotProps;
 import com.springboot.MyTodoList.service.DeepSeekService;
+import com.springboot.MyTodoList.service.FeatureTTService;
 import com.springboot.MyTodoList.service.ProjectTTService;
 import com.springboot.MyTodoList.service.SprintTaskTTService;
 import com.springboot.MyTodoList.service.SprintTTService;
@@ -35,6 +36,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
     private final ProjectTTService projectTTService;
     private final SprintTaskTTService sprintTaskTTService;
     private final TaskTTService taskTTService;
+    private final FeatureTTService featureTTService;
     private final TelegramClient telegramClient;
     private final BotProps botProps;
 
@@ -51,6 +53,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
             ProjectTTService projectTTService,
             SprintTaskTTService sprintTaskTTService,
             TaskTTService taskTTService,
+            FeatureTTService featureTTService,
             TelegramClient telegramClient) {
         this.botProps = bp;
         this.telegramClient = telegramClient;
@@ -61,6 +64,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         this.projectTTService = projectTTService;
         this.sprintTaskTTService = sprintTaskTTService;
         this.taskTTService = taskTTService;
+        this.featureTTService = featureTTService;
     }
 
     @Override
@@ -103,7 +107,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         ? "@" + username : String.valueOf(chatId);
 
         BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService,
-                userTTService, sprintTTService, projectTTService, sprintTaskTTService, taskTTService);
+                userTTService, sprintTTService, projectTTService, sprintTaskTTService, taskTTService, featureTTService);
         actions.setRequestText(messageFromTelegram);
         actions.setChatId(chatId);
         actions.setTelegramIdentity(telegramIdentity);
@@ -128,6 +132,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         actions.fnDelete();
         actions.fnListAll();
         actions.fnAddItem();
+        actions.fnAddFeature();
         actions.fnLLM();
         actions.fnElse();
 

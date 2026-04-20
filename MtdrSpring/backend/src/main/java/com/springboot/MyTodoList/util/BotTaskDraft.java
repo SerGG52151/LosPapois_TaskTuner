@@ -5,6 +5,8 @@ public class BotTaskDraft {
     private Integer storyPoints;
     private String priority;
     private Long taskId;
+    private long sprintId;
+    private Long featureId;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -17,4 +19,10 @@ public class BotTaskDraft {
 
     public Long getTaskId() { return taskId; }
     public void setTaskId(Long taskId) { this.taskId = taskId; }
+
+    public long getSprintId() { return sprintId; }
+    public void setSprintId(long sprintId) { this.sprintId = sprintId; }
+
+    public Long getFeatureId() { return featureId; }
+    public void setFeatureId(Long featureId) { this.featureId = featureId; }
 }

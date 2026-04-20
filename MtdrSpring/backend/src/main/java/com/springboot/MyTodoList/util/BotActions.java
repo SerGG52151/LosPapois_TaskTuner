@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,12 +18,14 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import com.springboot.MyTodoList.model.FeatureTT;
 import com.springboot.MyTodoList.model.ProjectTT;
 import com.springboot.MyTodoList.model.SprintTT;
 import com.springboot.MyTodoList.model.TaskTT;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.UserTT;
 import com.springboot.MyTodoList.service.DeepSeekService;
+import com.springboot.MyTodoList.service.FeatureTTService;
 import com.springboot.MyTodoList.service.ProjectTTService;
 import com.springboot.MyTodoList.service.SprintTTService;
 import com.springboot.MyTodoList.service.SprintTaskTTService;
@@ -37,9 +40,9 @@ public class BotActions {
 
     // Static maps survive across per-request BotActions instances
     private static final Map<Long, BotConversationState> chatStates = new ConcurrentHashMap<>();
-    // Para el registro
     private static final Map<Long, BotRegistrationDraft> registrationDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, BotTaskDraft> taskDrafts = new ConcurrentHashMap<>();
+    private static final Map<Long, BotFeatureDraft> featureDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, UserTT> authenticatedUsers = new ConcurrentHashMap<>();
 
     String requestText;
@@ -55,11 +58,12 @@ public class BotActions {
     ProjectTTService projectTTService;
     SprintTaskTTService sprintTaskTTService;
     TaskTTService taskTTService;
+    FeatureTTService featureTTService;
 
     public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds,
                       UserTTService uts, SprintTTService stts,
                       ProjectTTService ptts, SprintTaskTTService sttts,
-                      TaskTTService ttts) {
+                      TaskTTService ttts, FeatureTTService ftts) {
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
@@ -68,6 +72,7 @@ public class BotActions {
         projectTTService = ptts;
         sprintTaskTTService = sttts;
         taskTTService = ttts;
+        featureTTService = ftts;
         exit = false;
     }
 
@@ -99,6 +104,7 @@ public class BotActions {
         setCurrentState(BotConversationState.NONE);
         registrationDrafts.remove(chatId);
         taskDrafts.remove(chatId);
+        featureDrafts.remove(chatId);
     }
 
     private boolean isValidEmail(String email) {
@@ -160,6 +166,12 @@ public class BotActions {
                 InlineKeyboardButton.builder()
                     .text("➕ Add Task")
                     .callbackData(BotCommands.ADD_ITEM.getCommand())
+                    .build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("🗂 Add Feature")
+                    .callbackData(BotCommands.ADD_FEATURE.getCommand())
                     .build()
             ))
             .keyboardRow(new InlineKeyboardRow(
@@ -293,15 +305,15 @@ public class BotActions {
 
     public void fnHide() {
         if (exit) return;
-        
+
         String trimmedText = requestText.trim();
         if (!trimmedText.equals(BotCommands.HIDE_COMMAND.getCommand())
                 && !trimmedText.equals(BotLabels.HIDE_MAIN_SCREEN.getLabel())) {
             return;
         }
-        
+
         clearConversationState();
-        authenticatedUsers.remove(chatId);  // Logout
+        authenticatedUsers.remove(chatId);
         BotHelper.sendMessageToTelegram(chatId, BotMessages.BYE.getMessage(), telegramClient);
         exit = true;
     }
@@ -360,24 +372,28 @@ public class BotActions {
         if (state == BotConversationState.NONE) return;
 
         switch (state) {
-            case WAITING_REGISTER_NAME:            handleRegisterName();           break;
-            case WAITING_REGISTER_EMAIL:           handleRegisterEmail();          break;
-            case WAITING_REGISTER_PASSWORD:        handleRegisterPassword();       break;
-            case WAITING_REGISTER_PASSWORD_CONFIRM:handleRegisterPasswordConfirm();break;
-            case WAITING_NEW_ITEM_NAME:            handleNewItemName();            break;
-            case WAITING_NEW_ITEM_STORY_POINTS:    handleNewItemStoryPoints();     break;
-            case WAITING_NEW_ITEM_PRIORITY:        handleNewItemPriority();        break;
-            case WAITING_NEW_ITEM_SPRINT:          handleNewItemSprint();          break;
-            case WAITING_EDIT_TASK_FIELD:          handleEditTaskField();          break;
-            case WAITING_EDIT_TASK_NEW_NAME:       handleEditTaskNewName();        break;
-            case WAITING_EDIT_TASK_NEW_SP:         handleEditTaskNewSP();          break;
-            case WAITING_EDIT_TASK_NEW_PRIORITY:   handleEditTaskNewPriority();    break;
-            case WAITING_EDIT_TASK_NEW_SPRINT:     handleEditTaskNewSprint();      break;
+            case WAITING_REGISTER_NAME:             handleRegisterName();            break;
+            case WAITING_REGISTER_EMAIL:            handleRegisterEmail();           break;
+            case WAITING_REGISTER_PASSWORD:         handleRegisterPassword();        break;
+            case WAITING_REGISTER_PASSWORD_CONFIRM: handleRegisterPasswordConfirm(); break;
+            case WAITING_NEW_ITEM_NAME:             handleNewItemName();             break;
+            case WAITING_NEW_ITEM_STORY_POINTS:     handleNewItemStoryPoints();      break;
+            case WAITING_NEW_ITEM_PRIORITY:         handleNewItemPriority();         break;
+            case WAITING_NEW_ITEM_SPRINT:           handleNewItemSprint();           break;
+            case WAITING_NEW_ITEM_FEATURE:          handleNewItemFeature();          break;
+            case WAITING_NEW_FEATURE_NAME:          handleNewFeatureName();          break;
+            case WAITING_NEW_FEATURE_PRIORITY:      handleNewFeaturePriority();      break;
+            case WAITING_NEW_FEATURE_SPRINT:        handleNewFeatureSprint();        break;
+            case WAITING_EDIT_TASK_FIELD:           handleEditTaskField();           break;
+            case WAITING_EDIT_TASK_NEW_NAME:        handleEditTaskNewName();         break;
+            case WAITING_EDIT_TASK_NEW_SP:          handleEditTaskNewSP();           break;
+            case WAITING_EDIT_TASK_NEW_PRIORITY:    handleEditTaskNewPriority();     break;
+            case WAITING_EDIT_TASK_NEW_SPRINT:      handleEditTaskNewSprint();       break;
             default: break;
         }
     }
 
-    // ─── handlers de registro  ───────────────────────────────────────────
+    // ─── Registration handlers ───────────────────────────────────────────
 
     private void handleRegisterName() {
         BotRegistrationDraft draft = registrationDrafts.computeIfAbsent(chatId, k -> new BotRegistrationDraft());
@@ -433,7 +449,6 @@ public class BotActions {
         }
 
         if (!requestText.trim().equals(draft.getPassword())) {
-            // Mismatch — clear password and ask again from the password step
             draft.setPassword(null);
             setCurrentState(BotConversationState.WAITING_REGISTER_PASSWORD);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.PASSWORD_MISMATCH.getMessage(), telegramClient, null);
@@ -480,9 +495,9 @@ public class BotActions {
     private void showPriorityButtons() {
         InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
             .keyboardRow(new InlineKeyboardRow(
-                InlineKeyboardButton.builder().text("🟢 Bajo").callbackData("PRIO:low").build(),
-                InlineKeyboardButton.builder().text("🟡 Medio").callbackData("PRIO:medium").build(),
-                InlineKeyboardButton.builder().text("🔴 Alto").callbackData("PRIO:high").build()
+                InlineKeyboardButton.builder().text("🟢 Low").callbackData("PRIO:low").build(),
+                InlineKeyboardButton.builder().text("🟡 Medium").callbackData("PRIO:medium").build(),
+                InlineKeyboardButton.builder().text("🔴 High").callbackData("PRIO:high").build()
             ))
             .build();
         BotHelper.sendMessageToTelegramButtons(chatId, BotMessages.SELECT_PRIORITY.getMessage(), telegramClient, keyboard);
@@ -500,6 +515,7 @@ public class BotActions {
             exit = true;
             return;
         }
+
         BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
         draft.setPriority(priority);
         setCurrentState(BotConversationState.WAITING_NEW_ITEM_SPRINT);
@@ -518,7 +534,9 @@ public class BotActions {
 
         var builder = InlineKeyboardMarkup.builder();
         for (SprintTT sprint : available) {
+            String stateTag = "inactive".equals(sprint.getStateSprint()) ? " 🕐" : " ✅";
             String label = sprint.getNameSprint()
+                + stateTag
                 + " (" + sprint.getDateStartSpr() + " → " + sprint.getDateEndSpr() + ")";
             builder.keyboardRow(new InlineKeyboardRow(
                 InlineKeyboardButton.builder()
@@ -530,10 +548,6 @@ public class BotActions {
         BotHelper.sendMessageToTelegramButtons(chatId, BotMessages.SELECT_SPRINT.getMessage(), telegramClient, builder.build());
     }
 
-    /**
-     * Returns sprints with state != 'done'.
-     * Seeds the DB with 3 test sprints the first time this returns empty.
-     */
     private List<SprintTT> getAvailableSprints() {
         List<SprintTT> available = sprintTTService.findAll().stream()
             .filter(s -> !"done".equals(s.getStateSprint()))
@@ -548,7 +562,6 @@ public class BotActions {
         return available;
     }
 
-    /** Creates a seed project + 3 active sprints when the DB is empty. */
     private void seedSprints() {
         logger.info("No active sprints found — seeding test data...");
         List<ProjectTT> projects = projectTTService.findAll();
@@ -577,7 +590,7 @@ public class BotActions {
         s2.setDateStartSpr(LocalDate.now().plusWeeks(2));
         s2.setDateEndSpr(LocalDate.now().plusWeeks(4));
         s2.setTaskGoal(25);
-        s2.setStateSprint("active");
+        s2.setStateSprint("inactive");  // future sprint — activated by process_sprint_transitions
         s2.setPjId(pjId);
         sprintTTService.addSprint(s2);
 
@@ -586,7 +599,7 @@ public class BotActions {
         s3.setDateStartSpr(LocalDate.now().plusWeeks(4));
         s3.setDateEndSpr(LocalDate.now().plusWeeks(6));
         s3.setTaskGoal(15);
-        s3.setStateSprint("active");
+        s3.setStateSprint("inactive");  // future sprint — activated by process_sprint_transitions
         s3.setPjId(pjId);
         sprintTTService.addSprint(s3);
 
@@ -609,23 +622,93 @@ public class BotActions {
             return;
         }
 
+        BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
+        draft.setSprintId(sprintId);
+
+        // Advance to feature selection filtered by the chosen sprint
+        setCurrentState(BotConversationState.WAITING_NEW_ITEM_FEATURE);
+        showFeatureSelectionForSprint(sprintId);
+        exit = true;
+    }
+
+    private void showFeatureSelectionForSprint(long sprintId) {
+        List<FeatureTT> features = featureTTService.getFeaturesBySprint(sprintId);
+
+        var builder = InlineKeyboardMarkup.builder();
+
+        if (features.isEmpty()) {
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("— No feature —")
+                    .callbackData("FEATURE:none")
+                    .build()
+            ));
+            BotHelper.sendMessageToTelegramButtons(
+                chatId,
+                "⚠️ " + BotMessages.NO_FEATURES_FOR_SPRINT.getMessage(),
+                telegramClient, builder.build());
+            return;
+        }
+
+        for (FeatureTT f : features) {
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("🗂 " + f.getNameFeature())
+                    .callbackData("FEATURE:" + f.getFeatureId())
+                    .build()
+            ));
+        }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder()
+                .text("— No feature —")
+                .callbackData("FEATURE:none")
+                .build()
+        ));
+
+        BotHelper.sendMessageToTelegramButtons(
+            chatId, BotMessages.SELECT_FEATURE.getMessage(), telegramClient, builder.build());
+    }
+
+    private void handleNewItemFeature() {
+        if (!requestText.startsWith("FEATURE:")) {
+            BotTaskDraft draft = taskDrafts.get(chatId);
+            long sprintId = draft != null ? draft.getSprintId() : 0;
+            showFeatureSelectionForSprint(sprintId);
+            exit = true;
+            return;
+        }
+
         BotTaskDraft draft = taskDrafts.get(chatId);
         if (draft == null) {
             clearConversationState();
-            BotHelper.sendMessageToTelegram(chatId, "Error creating task. Try again with /additem.", telegramClient, null);
+            BotHelper.sendMessageToTelegram(chatId, "Error creating task. Try again with /addtask.", telegramClient, null);
             exit = true;
+            return;
+        }
+
+        String featureToken = requestText.substring(8);
+        if (!"none".equals(featureToken)) {
+            try {
+                draft.setFeatureId(Long.parseLong(featureToken));
+            } catch (NumberFormatException e) {
+                draft.setFeatureId(null);
+            }
+        }
+
+        saveTaskFromDraft(draft);
+        exit = true;
+    }
+
+    private void saveTaskFromDraft(BotTaskDraft draft) {
+        long sprintId = draft.getSprintId();
+        SprintTT sprint = sprintTTService.getSprintById(sprintId).getBody();
+        if (sprint == null) {
+            BotHelper.sendMessageToTelegram(chatId, "Sprint not found. Select another.", telegramClient, null);
+            clearConversationState();
             return;
         }
 
         UserTT currentUser = getAuthenticatedUser();
-
-        SprintTT sprint = sprintTTService.getSprintById(sprintId).getBody();
-        if (sprint == null) {
-            BotHelper.sendMessageToTelegram(chatId, "Sprint not found. Select another.", telegramClient, null);
-            showSprintSelection();
-            exit = true;
-            return;
-        }
 
         TaskTT task = new TaskTT();
         task.setNameTask(draft.getName());
@@ -633,6 +716,7 @@ public class BotActions {
         task.setDateStartTask(sprint.getDateStartSpr());
         task.setDateEndSetTask(sprint.getDateEndSpr());
         task.setPriority(draft.getPriority());
+        task.setFeatureId(draft.getFeatureId());
         task.setUserId(currentUser.getUserId());
         task.setPjId(sprint.getPjId());
 
@@ -642,13 +726,140 @@ public class BotActions {
         } catch (Exception e) {
             logger.error("Error saving task: {}", e.getMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, "Error saving task. Try again.", telegramClient, null);
-            exit = true;
             return;
         }
 
         clearConversationState();
         BotHelper.sendMessageToTelegram(chatId, BotMessages.TASK_ADDED.getMessage(), telegramClient, null);
-        showMainMenu(); 
+        showMainMenu();
+    }
+
+    // ─── Feature creation handlers ───────────────────────────────────────
+
+    public void fnAddFeature() {
+        if (exit) return;
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        if (!requestText.contains(BotCommands.ADD_FEATURE.getCommand())) return;
+
+        featureDrafts.put(chatId, new BotFeatureDraft());
+        setCurrentState(BotConversationState.WAITING_NEW_FEATURE_NAME);
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_FEATURE_NAME.getMessage(), telegramClient, null);
+        exit = true;
+    }
+
+    private void handleNewFeatureName() {
+        BotFeatureDraft draft = featureDrafts.computeIfAbsent(chatId, k -> new BotFeatureDraft());
+        draft.setName(requestText.trim());
+        draft.setPriority("medium");  // default — priority not asked to the user
+        setCurrentState(BotConversationState.WAITING_NEW_FEATURE_SPRINT);
+        showFeatureSprintSelection();
+        exit = true;
+    }
+
+    private void showFeaturePriorityButtons() {
+        InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("🟢 Low").callbackData("FPRIO:low").build(),
+                InlineKeyboardButton.builder().text("🟡 Medium").callbackData("FPRIO:medium").build(),
+                InlineKeyboardButton.builder().text("🔴 High").callbackData("FPRIO:high").build()
+            ))
+            .build();
+        BotHelper.sendMessageToTelegramButtons(chatId, BotMessages.SELECT_FEATURE_PRIORITY.getMessage(), telegramClient, keyboard);
+    }
+
+    private void handleNewFeaturePriority() {
+        if (!requestText.startsWith("FPRIO:")) {
+            showFeaturePriorityButtons();
+            exit = true;
+            return;
+        }
+        String priority = requestText.substring(6);
+        if (!priority.equals("low") && !priority.equals("medium") && !priority.equals("high")) {
+            showFeaturePriorityButtons();
+            exit = true;
+            return;
+        }
+        BotFeatureDraft draft = featureDrafts.computeIfAbsent(chatId, k -> new BotFeatureDraft());
+        draft.setPriority(priority);
+        setCurrentState(BotConversationState.WAITING_NEW_FEATURE_SPRINT);
+        showFeatureSprintSelection();
+        exit = true;
+    }
+
+    private void showFeatureSprintSelection() {
+        List<SprintTT> available = getAvailableSprints();
+
+        if (available.isEmpty()) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.NO_SPRINTS_CREATED.getMessage(), telegramClient, null);
+            clearConversationState();
+            return;
+        }
+
+        var builder = InlineKeyboardMarkup.builder();
+        for (SprintTT sprint : available) {
+            String stateTag = "inactive".equals(sprint.getStateSprint()) ? " 🕐" : " ✅";
+            String label = sprint.getNameSprint()
+                + stateTag
+                + " (" + sprint.getDateStartSpr() + " → " + sprint.getDateEndSpr() + ")";
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text(label)
+                    .callbackData("FSPRINT:" + sprint.getSprId())
+                    .build()
+            ));
+        }
+        BotHelper.sendMessageToTelegramButtons(
+            chatId, BotMessages.SELECT_FEATURE_SPRINT.getMessage(), telegramClient, builder.build());
+    }
+
+    private void handleNewFeatureSprint() {
+        if (!requestText.startsWith("FSPRINT:")) {
+            showFeatureSprintSelection();
+            exit = true;
+            return;
+        }
+
+        long sprintId;
+        try {
+            sprintId = Long.parseLong(requestText.substring(8));
+        } catch (NumberFormatException e) {
+            showFeatureSprintSelection();
+            exit = true;
+            return;
+        }
+
+        BotFeatureDraft draft = featureDrafts.get(chatId);
+        if (draft == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error creating feature. Try again with /addfeature.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        draft.setSprintId(sprintId);
+
+        FeatureTT feature = new FeatureTT();
+        feature.setNameFeature(draft.getName());
+        feature.setPriorityFeature(draft.getPriority());
+        feature.setSprId(sprintId);
+
+        try {
+            featureTTService.addFeature(feature);
+        } catch (Exception e) {
+            logger.error("Error saving feature: {}", e.getMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, "Error saving feature. Try again.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.FEATURE_ADDED.getMessage(), telegramClient, null);
+        showMainMenu();
         exit = true;
     }
 
@@ -667,47 +878,80 @@ public class BotActions {
                 || requestText.equals(BotLabels.MY_TODO_LIST.getLabel())))
             return;
 
-        UserTT user = getAuthenticatedUser();
-        List<TaskTT> tasks = taskTTService.getTasksByUserInActiveSprint(user.getUserId());
+        UserTT me = getAuthenticatedUser();
+
+        // Only my tasks in the active sprint
+        List<TaskTT> myTasks = taskTTService.getTasksByUserInActiveSprint(me.getUserId());
+
+        List<TaskTT> myPending = myTasks.stream()
+            .filter(t -> t.getDateEndRealTask() == null).collect(Collectors.toList());
+        List<TaskTT> myDone = myTasks.stream()
+            .filter(t -> t.getDateEndRealTask() != null).collect(Collectors.toList());
+
+        // Group pending tasks by featureId — only features I have tasks in
+        Map<Long, List<TaskTT>> byFeature = myPending.stream()
+            .filter(t -> t.getFeatureId() != null)
+            .collect(Collectors.groupingBy(TaskTT::getFeatureId));
+
+        List<TaskTT> noFeaturePending = myPending.stream()
+            .filter(t -> t.getFeatureId() == null)
+            .collect(Collectors.toList());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📋 MY TASKS - ACTIVE SPRINT\n\n");
+        sb.append("📋 *My Tasks — Active Sprint*\n\n");
 
-        if (tasks.isEmpty()) {
+        if (myTasks.isEmpty()) {
             sb.append("You have no tasks in the active sprint.");
-        } else {
-            List<TaskTT> pending = tasks.stream()
-                .filter(t -> t.getDateEndRealTask() == null).collect(Collectors.toList());
-            List<TaskTT> done = tasks.stream()
-                .filter(t -> t.getDateEndRealTask() != null).collect(Collectors.toList());
+            BotHelper.sendMessageToTelegram(chatId, sb.toString(), telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
 
-            if (!pending.isEmpty()) {
-                sb.append("⏳ *PENDING TASKS*\n");
-                String[] pHeaders = {"PRIO", "TASK", "SP", "DUE DATE"};
-                List<String[]> pRows = new ArrayList<>();
-                for (TaskTT t : pending) {
-                    String prio = "high".equals(t.getPriority()) ? "HIGH"
-                        : "medium".equals(t.getPriority()) ? "MED" : "LOW";
-                    String name = wrap(t.getNameTask() != null ? t.getNameTask() : "-", 15);
-                    String sp   = t.getStoryPoints() != null ? t.getStoryPoints() + " SP" : "-";
-                    String date = t.getDateEndSetTask() != null
-                        ? t.getDateEndSetTask().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-";
-                    pRows.add(new String[]{prio, name, sp, date});
+        // ── Features where I have tasks ───────────────────────────────────────
+        if (!byFeature.isEmpty()) {
+            // Sort features by priority
+            List<Long> sortedFeatureIds = byFeature.keySet().stream()
+                .sorted(Comparator.comparingInt(fid -> {
+                    FeatureTT f = featureTTService.getFeatureById(fid).getBody();
+                    return f != null ? priorityOrder(f.getPriorityFeature()) : 99;
+                }))
+                .collect(Collectors.toList());
+
+            for (Long featureId : sortedFeatureIds) {
+                FeatureTT feature = featureTTService.getFeatureById(featureId).getBody();
+                if (feature == null) continue;
+
+                sb.append("🗂 *").append(feature.getNameFeature()).append("*\n");
+
+                for (TaskTT t : byFeature.get(featureId)) {
+                    sb.append("  ").append(prioEmoji(t.getPriority()))
+                      .append(" ").append(t.getNameTask())
+                      .append(" — ").append(t.getStoryPoints()).append(" SP")
+                      .append(" | Due: ").append(t.getDateEndSetTask()).append("\n");
                 }
-                sb.append(buildTable(pHeaders, pRows)).append("\n");
+                sb.append("\n");
             }
+        }
 
-            if (!done.isEmpty()) {
-                sb.append("✅ *COMPLETED TASKS*\n");
-                String[] dHeaders = {"TASK", "DELIVERED"};
-                List<String[]> dRows = new ArrayList<>();
-                for (TaskTT t : done) {
-                    String name = wrap(t.getNameTask() != null ? t.getNameTask() : "-", 25);
-                    String date = t.getDateEndRealTask() != null
-                        ? t.getDateEndRealTask().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "-";
-                    dRows.add(new String[]{name, date});
-                }
-                sb.append(buildTable(dHeaders, dRows));
+        // ── No feature ────────────────────────────────────────────────────────
+        if (!noFeaturePending.isEmpty()) {
+            sb.append("🔹 *No feature*\n");
+            for (TaskTT t : noFeaturePending) {
+                sb.append("  ").append(prioEmoji(t.getPriority()))
+                  .append(" ").append(t.getNameTask())
+                  .append(" — ").append(t.getStoryPoints()).append(" SP")
+                  .append(" | Due: ").append(t.getDateEndSetTask()).append("\n");
+            }
+            sb.append("\n");
+        }
+
+        // ── Completed ─────────────────────────────────────────────────────────
+        if (!myDone.isEmpty()) {
+            sb.append("✅ *Completed*\n");
+            for (TaskTT t : myDone) {
+                sb.append("• ").append(t.getNameTask())
+                  .append(" — delivered: ").append(t.getDateEndRealTask()).append("\n");
             }
         }
 
@@ -955,7 +1199,6 @@ public class BotActions {
             return;
         }
 
-        // Remove from current sprint(s) and add to the new one
         List<com.springboot.MyTodoList.model.SprintTaskTT> currentSprints =
             sprintTaskTTService.getSprintsForTask(task.getTaskId());
 
@@ -983,10 +1226,38 @@ public class BotActions {
         exit = true;
     }
 
+    // ─── Helpers ─────────────────────────────────────────────────────────
+
+    private int priorityWeight(String priority) {
+        if ("high".equals(priority))   return 3;
+        if ("medium".equals(priority)) return 2;
+        return 1;
+    }
+
+    private int safeInt(Integer value) {
+        return value != null ? value : 0;
+    }
+
+    private String progressBar(int pct) {
+        int filled = pct / 10;
+        return "▓".repeat(filled) + "░".repeat(10 - filled);
+    }
+
+    private int priorityOrder(String priority) {
+        if ("high".equals(priority))   return 0;
+        if ("medium".equals(priority)) return 1;
+        return 2;
+    }
+
     private String prioEmoji(String priority) {
-        if ("high".equals(priority)) return "🔴";
+        if ("high".equals(priority))   return "🔴";
         if ("medium".equals(priority)) return "🟡";
         return "🟢";
+    }
+
+    private String resolveUserName(long userId) {
+        UserTT u = userTTService.getUserById(userId).getBody();
+        return u != null ? u.getNameUser() : "User #" + userId;
     }
 
     public void fnAddItem() {
@@ -996,7 +1267,7 @@ public class BotActions {
             exit = true;
             return;
         }
-        
+
         logger.info("Adding item");
         if (!(requestText.contains(BotCommands.ADD_ITEM.getCommand())
                 || requestText.contains(BotLabels.ADD_NEW_ITEM.getLabel())))
@@ -1012,7 +1283,7 @@ public class BotActions {
         if (exit) return;
         BotHelper.sendMessageToTelegram(
             chatId,
-            "Select a valid option, use /additem to add a task or /register to register.",
+            "Select a valid option, use /addtask to add a task, /addfeature to create a feature, or /register to sign up.",
             telegramClient,
             null
         );
@@ -1054,17 +1325,56 @@ public class BotActions {
         List<TaskTT> tasks = taskTTService.getTasksByUserInActiveSprint(user.getUserId());
 
         StringBuilder sb = new StringBuilder();
-        sb.append("📊 PROGRESS - ACTIVE SPRINT\n\n");
+        sb.append("📊 *My Progress — Active Sprint*\n\n");
 
         if (tasks.isEmpty()) {
             sb.append("You have no tasks in the active sprint.");
-        } else {
-            long done    = tasks.stream().filter(t -> t.getDateEndRealTask() != null).count();
-            long pending = tasks.stream().filter(t -> t.getDateEndRealTask() == null).count();
-            sb.append("✅ Completed: ").append(done).append("\n");
-            sb.append("⏳ Pending:  ").append(pending).append("\n");
-            sb.append("📦 Total:       ").append(tasks.size());
-            if (pending == 0) sb.append("\n\n🎉 All your tasks are completed!");
+            BotHelper.sendMessageToTelegram(chatId, sb.toString(), telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        // Group by featureId
+        Map<Long, List<TaskTT>> byFeature = tasks.stream()
+            .filter(t -> t.getFeatureId() != null)
+            .collect(Collectors.groupingBy(TaskTT::getFeatureId));
+
+        List<TaskTT> noFeature = tasks.stream()
+            .filter(t -> t.getFeatureId() == null)
+            .collect(Collectors.toList());
+
+        // ── Per feature: weighted progress (SP × priority) ───────────────────
+        for (Map.Entry<Long, List<TaskTT>> entry : byFeature.entrySet()) {
+            FeatureTT feature = featureTTService.getFeatureById(entry.getKey()).getBody();
+            String featureName = feature != null ? feature.getNameFeature() : "Feature #" + entry.getKey();
+            List<TaskTT> ft = entry.getValue();
+
+            int totalWeight = ft.stream()
+                .mapToInt(t -> safeInt(t.getStoryPoints()) * priorityWeight(t.getPriority()))
+                .sum();
+            int doneWeight = ft.stream()
+                .filter(t -> t.getDateEndRealTask() != null)
+                .mapToInt(t -> safeInt(t.getStoryPoints()) * priorityWeight(t.getPriority()))
+                .sum();
+
+            int pct   = totalWeight > 0 ? doneWeight * 100 / totalWeight : 0;
+            long done  = ft.stream().filter(t -> t.getDateEndRealTask() != null).count();
+            int  total = ft.size();
+
+            sb.append("🗂 *").append(featureName).append("*\n");
+            sb.append("  ").append(progressBar(pct)).append(" *").append(pct).append("%*");
+            sb.append("  (").append(done).append("/").append(total).append(" tasks)\n\n");
+        }
+
+        // ── No feature ────────────────────────────────────────────────────────
+        if (!noFeature.isEmpty()) {
+            long done  = noFeature.stream().filter(t -> t.getDateEndRealTask() != null).count();
+            int  total = noFeature.size();
+            int  pct   = total > 0 ? (int)(done * 100 / total) : 0;
+            sb.append("🔹 *No feature*\n");
+            sb.append("  ").append(progressBar(pct)).append(" *").append(pct).append("%*");
+            sb.append("  (").append(done).append("/").append(total).append(" tasks)\n");
         }
 
         BotHelper.sendMessageToTelegram(chatId, sb.toString(), telegramClient, null);
@@ -1152,7 +1462,6 @@ public class BotActions {
         task.setDateEndRealTask(LocalDate.now());
         taskTTService.updateTask(taskId, task);
 
-        // Update SPRINT_TASK_TT.state_task from "active" → "done"
         sprintTaskTTService.getSprintsForTask(taskId).stream()
             .filter(st -> "active".equals(st.getStateTask()))
             .findFirst()
@@ -1162,7 +1471,7 @@ public class BotActions {
         boolean onTime = !LocalDate.now().isAfter(task.getDateEndSetTask());
         String resultado = onTime ? "⏱ delivered on time!" : "⚠️ delivered late.";
         BotHelper.sendMessageToTelegram(
-            chatId, "✅ " + task.getNameTask() + " completed - " + resultado, telegramClient, null);
+            chatId, "✅ " + task.getNameTask() + " completed — " + resultado, telegramClient, null);
 
         showMainMenu();
         exit = true;

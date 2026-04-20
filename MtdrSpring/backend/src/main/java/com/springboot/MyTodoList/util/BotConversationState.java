@@ -2,21 +2,27 @@ package com.springboot.MyTodoList.util;
 
 public enum BotConversationState {
     NONE,
-    // Creación de tareas
+    // Task creation flow
     WAITING_NEW_ITEM_NAME,
     WAITING_NEW_ITEM_STORY_POINTS,
+    WAITING_NEW_ITEM_DATE_START,
+    WAITING_NEW_ITEM_DATE_END,
     WAITING_NEW_ITEM_PRIORITY,
     WAITING_NEW_ITEM_SPRINT,
-    // Flujo de edición de tarea
+    WAITING_NEW_ITEM_FEATURE,
+    // Task edit flow
     WAITING_EDIT_TASK_FIELD,
     WAITING_EDIT_TASK_NEW_NAME,
     WAITING_EDIT_TASK_NEW_SP,
     WAITING_EDIT_TASK_NEW_PRIORITY,
     WAITING_EDIT_TASK_NEW_SPRINT,
-    // Flujo de creación de cuenta
+    // Feature creation flow
+    WAITING_NEW_FEATURE_NAME,
+    WAITING_NEW_FEATURE_PRIORITY,
+    WAITING_NEW_FEATURE_SPRINT,
+    // Registration flow
     WAITING_REGISTER_NAME,
     WAITING_REGISTER_EMAIL,
     WAITING_REGISTER_PASSWORD,
     WAITING_REGISTER_PASSWORD_CONFIRM,
-
 }

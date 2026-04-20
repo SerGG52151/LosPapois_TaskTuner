@@ -4,8 +4,8 @@ public enum BotCommands {
 
 	REGISTER_COMMAND("/register"),
 	LOGIN_COMMAND("/login"),
-	START_COMMAND("/start"), 
-	HIDE_COMMAND("/hide"), 
+	START_COMMAND("/start"),
+	HIDE_COMMAND("/hide"),
 	TODO_LIST("/todolist"),
 	ADD_ITEM("/addtask"),
 	STATUS("/status"),
@@ -13,7 +13,8 @@ public enum BotCommands {
 	MARK_REWORK("/rework"),
 	MARK_UNDO("/undo"),
 	EDIT_TASK("/edittask"),
-	LLM_REQ("/llm");
+	LLM_REQ("/llm"),
+	ADD_FEATURE("/addfeature");
 
 	private final String command;
 
