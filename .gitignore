@@ -49,9 +49,7 @@ yarn-error.log*
 
 # Modifiable locally
 /MtdrSpring/backend/wallet
-/MtdrSpring/backend/src/main/resources/application.properties
-/MtdrSpring/backend/src/main/resources/todolistapp-springboot.yaml
-/MtdrSpring/backend/Dockerfile
+/MtdrSpring/backend/src/main/resources/application.properties.example
 /MtdrSpring/backend/DockerfileDev
 /MtdrSpring/backend/logs.log*
 /MtdrSpring/setup-local.sh
