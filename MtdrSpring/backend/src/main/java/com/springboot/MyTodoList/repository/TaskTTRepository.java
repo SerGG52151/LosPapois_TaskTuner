@@ -64,6 +64,18 @@ public interface TaskTTRepository extends JpaRepository<TaskTT, Long> {
      */
     List<TaskTT> findByPjIdAndPriority(long pjId, String priority);
 
+    List<TaskTT> findByFeatureId(long featureId);
+
+    /*
+     * All tasks in a specific feature that belong to an active sprint.
+     * Used for team-wide feature view — returns tasks from ALL users.
+     */
+    @Query("SELECT t FROM TaskTT t " +
+           "JOIN SprintTaskTT st ON st.id.taskId = t.taskId " +
+           "JOIN SprintTT s ON s.sprId = st.id.sprId " +
+           "WHERE t.featureId = :featureId AND s.stateSprint = 'active'")
+    List<TaskTT> findByFeatureIdInActiveSprint(@Param("featureId") long featureId);
+
     /*
      * JPQL query — computes total story points for all tasks in a sprint.
      *

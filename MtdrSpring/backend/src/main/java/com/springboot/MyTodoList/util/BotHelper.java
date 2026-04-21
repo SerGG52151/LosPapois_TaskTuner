@@ -17,11 +17,12 @@ public class BotHelper {
 
 		try {
 			// prepare message
-			SendMessage messageToTelegram = 
+			SendMessage messageToTelegram =
 					SendMessage
 					.builder()
 					.chatId(chatId)
 					.text(text)
+					.parseMode("Markdown")
 					.replyMarkup(new ReplyKeyboardRemove(true))
 					.build()
 				;
@@ -38,11 +39,12 @@ public class BotHelper {
 
 		try {
 			// prepare message
-			SendMessage messageToTelegram = 
+			SendMessage messageToTelegram =
 					SendMessage
 					.builder()
 					.chatId(chatId)
 					.text(text)
+					.parseMode("Markdown")
 					.replyMarkup(rk)
 					.build()
 				;
@@ -61,6 +63,7 @@ public class BotHelper {
         SendMessage messageToTelegram = SendMessage.builder()
             .chatId(chatId)
             .text(text)
+            .parseMode("Markdown")
             .replyMarkup(ik)
             .build();
         bot.execute(messageToTelegram);
