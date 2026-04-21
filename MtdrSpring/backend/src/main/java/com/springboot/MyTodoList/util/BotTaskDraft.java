@@ -1,13 +1,12 @@
 package com.springboot.MyTodoList.util;
 
-import java.time.LocalDate;
-
 public class BotTaskDraft {
     private String name;
     private Integer storyPoints;
-    private LocalDate dateStart;
-    private LocalDate dateEnd;
     private String priority;
+    private Long taskId;
+    private long sprintId;
+    private Long featureId;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -15,12 +14,15 @@ public class BotTaskDraft {
     public Integer getStoryPoints() { return storyPoints; }
     public void setStoryPoints(Integer storyPoints) { this.storyPoints = storyPoints; }
 
-    public LocalDate getDateStart() { return dateStart; }
-    public void setDateStart(LocalDate dateStart) { this.dateStart = dateStart; }
-
-    public LocalDate getDateEnd() { return dateEnd; }
-    public void setDateEnd(LocalDate dateEnd) { this.dateEnd = dateEnd; }
-
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
+
+    public Long getTaskId() { return taskId; }
+    public void setTaskId(Long taskId) { this.taskId = taskId; }
+
+    public long getSprintId() { return sprintId; }
+    public void setSprintId(long sprintId) { this.sprintId = sprintId; }
+
+    public Long getFeatureId() { return featureId; }
+    public void setFeatureId(Long featureId) { this.featureId = featureId; }
 }
