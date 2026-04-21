@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.iml
+*.iws
+*.ipr
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Build & Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+.mvn
+mvnw
+mvnw.cmd
+
+# Logs
+logs
+logs.log*
+*.gz
+
+# Documentation
+README.md
+*.md
+
+# Test files
+src/test
+
+# Node frontend dev
+src/main/frontend/node_modules
+src/main/frontend/.env
+src/main/frontend/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+.env
+.env.local
