@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,12 +26,18 @@ import com.springboot.MyTodoList.service.KpisService;
  *    GET /projects/{pjId}/sprints/{sprId}/kpis/completitud
  */
 @RestController
+@RequestMapping("/api")
 public class KpisController {
 
     @Autowired
     private KpisService kpisService;
 
     // ─── Nivel proyecto ───────────────────────────────────────────────────────
+
+    @GetMapping("/projects/{pjId}/kpis/project-velocity")
+    public ResponseEntity<Map<String, Object>> getProjectVelocityMetric(@PathVariable long pjId) {
+        return ResponseEntity.ok(kpisService.getProjectVelocityMetric(pjId));
+    }
 
     @GetMapping("/projects/{pjId}/kpis/velocity")
     public ResponseEntity<List<Map<String, Object>>> getVelocityByProject(@PathVariable long pjId) {
@@ -76,5 +83,22 @@ public class KpisController {
     public ResponseEntity<List<Map<String, Object>>> getCompletitudBySprint(
             @PathVariable long pjId, @PathVariable long sprId) {
         return ResponseEntity.ok(kpisService.getCompletitudBySprint(pjId, sprId));
+    }
+
+    // ─── Nivel feature ────────────────────────────────────────────────────────
+
+    @GetMapping("/features/{featureId}/kpis/completitud")
+    public ResponseEntity<List<Map<String, Object>>> getCompletitudByFeature(@PathVariable long featureId) {
+        return ResponseEntity.ok(kpisService.getCompletitudByFeature(featureId));
+    }
+
+    @GetMapping("/features/{featureId}/kpis/velocity")
+    public ResponseEntity<List<Map<String, Object>>> getVelocityByFeature(@PathVariable long featureId) {
+        return ResponseEntity.ok(kpisService.getVelocityByFeature(featureId));
+    }
+
+    @GetMapping("/features/{featureId}/kpis/carga-equipo")
+    public ResponseEntity<List<Map<String, Object>>> getCargaByFeature(@PathVariable long featureId) {
+        return ResponseEntity.ok(kpisService.getCargaByFeature(featureId));
     }
 }

@@ -6,7 +6,7 @@ const getApiBaseUrl = (): string => {
   return `${protocol}//${hostname}${port}`;
 };
 
-export const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl() + '/api';
 export const API_CONFIG = {
   baseUrl: API_BASE_URL,
   auth: {

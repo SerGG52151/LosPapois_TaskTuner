@@ -11,45 +11,43 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
+@RequestMapping("/api")
 public class UserTTController {
 
     @Autowired
     private UserTTService userTTService;
 
+    @GetMapping(value = "/users-tt/{id}")
+    public ResponseEntity<?> getUserById(@PathVariable long id) {
+        try {
+            ResponseEntity<UserTT> user = userTTService.getUserById(id);
+            return user;
+        } catch (Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        }
+    }
+
     @GetMapping(value = "/users-tt")
-    public List<UserTT> getAllUsers() {
-        return userTTService.findAll();
+    public ResponseEntity<?> getAllUsers() {
+        List<UserTT> users = userTTService.findAll();
+        return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
     @GetMapping(value = "/users-tt/telegram/{idTelegram}")
-    public ResponseEntity<UserTT> getUserByTelegram(@PathVariable String idTelegram) {
+    public ResponseEntity<?> getUserByTelegram(@PathVariable String idTelegram) {
         Optional<UserTT> user = userTTService.getUserByTelegram(idTelegram);
         return user.map(value -> new ResponseEntity<>(value, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @GetMapping(value = "/users-tt/role/{role}")
-    public List<UserTT> getUsersByRole(@PathVariable String role) {
-        return userTTService.getUsersByRole(role);
-    }
-
-    @GetMapping(value = "/users-tt/{id}")
-    public ResponseEntity<UserTT> getUserById(@PathVariable long id) {
-        try {
-            return userTTService.getUserById(id);
-        } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @PostMapping(value = "/users-tt")
-    public ResponseEntity<UserTT> addUser(@RequestBody UserTT user) {
-        UserTT saved = userTTService.addUser(user);
-        return new ResponseEntity<>(saved, HttpStatus.OK);
+    public ResponseEntity<?> getUsersByRole(@PathVariable String role) {
+        List<UserTT> users = userTTService.getUsersByRole(role);
+        return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
     @PutMapping(value = "/users-tt/{id}")
-    public ResponseEntity<UserTT> updateUser(@RequestBody UserTT user, @PathVariable long id) {
+    public ResponseEntity<?> updateUser(@RequestBody UserTT user, @PathVariable long id) {
         try {
             UserTT updated = userTTService.updateUser(id, user);
             if (updated == null) {
@@ -62,13 +60,18 @@ public class UserTTController {
     }
 
     @DeleteMapping(value = "/users-tt/{id}")
-    public ResponseEntity<Boolean> deleteUser(@PathVariable long id) {
-        Boolean flag = false;
+    public ResponseEntity<?> deleteUser(@PathVariable long id) {
         try {
-            flag = userTTService.deleteUser(id);
+            Boolean flag = userTTService.deleteUser(id);
             return new ResponseEntity<>(flag, HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(flag, HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(false, HttpStatus.NOT_FOUND);
         }
+    }
+
+    @PostMapping(value = "/users-tt")
+    public ResponseEntity<?> addUser(@RequestBody UserTT user) {
+        UserTT saved = userTTService.addUser(user);
+        return new ResponseEntity<>(saved, HttpStatus.OK);
     }
 }

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserGroupIcon } from '@heroicons/react/24/outline';
 import MemberCard from '../Components/MemberCard';
 import AddMemberModal from '../Components/AddMemberModal';
+import { saveToStorage, getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface Member {
   id: number;
@@ -16,9 +17,18 @@ const INITIAL_MEMBERS: Member[] = [
 ];
 
 export default function TeamPage() {
-  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
+  const [members, setMembers] = useState<Member[]>(() => {
+    // Initialize with stored data or initial fallback
+    const stored = getFromStorage<Member[]>(STORAGE_KEYS.TEAM_MEMBERS);
+    return stored || INITIAL_MEMBERS;
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+
+  // Persist members whenever they change
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.TEAM_MEMBERS, members);
+  }, [members]);
 
   function handleAdd(data: Omit<Member, 'id'>) {
     const newMember: Member = { ...data, id: Date.now() };

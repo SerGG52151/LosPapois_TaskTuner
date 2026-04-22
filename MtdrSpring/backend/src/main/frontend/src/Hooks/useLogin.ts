@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_CONFIG } from '../config';
+import { saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface LoginCredentials {
   mail: string;
@@ -37,10 +38,15 @@ export default function useLogin(): UseLoginReturn {
 
       if (response.ok) {
         const user = await response.json();
-        console.log('Login successful', user);
-        localStorage.setItem('user', JSON.stringify(user));
-        // Don't update state after navigation
-        navigate('/tasks');
+
+        // Use centralized storage utility
+        saveToStorage(STORAGE_KEYS.USER, user);
+        
+        if (user.token) {
+          saveToStorage(STORAGE_KEYS.AUTH_TOKEN, user.token);
+        }
+        
+        navigate('/dashboard');
       } else {
         const errorData = await response.json();
         if (isMountedRef.current) {
@@ -59,7 +65,6 @@ export default function useLogin(): UseLoginReturn {
     }
   };
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       isMountedRef.current = false;

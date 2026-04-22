@@ -1,0 +1,49 @@
+name: Development CI
+
+on:
+  push:
+    branches: [ "development" ]
+  pull_request:
+    branches: [ "development" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./MtdrSpring/backend
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Reconstruct Oracle Wallet from Secret
+      run: |
+        echo "${{ secrets.ORACLE_WALLET_BASE64 }}" | base64 -d > Wallet_TaskTuner.zip
+        unzip Wallet_TaskTuner.zip -d .
+        # The zip contains the 'wallet/' folder, so it will extract correctly here.
+
+    - name: Build with Maven (Includes Frontend)
+      # Treating warnings as errors is disabled to suppress React linting failures in CI
+      run: CI=false ./mvnw clean package
+
+    - name: Build Docker Image (Validation)
+      run: |
+        docker build -t tasktuner-dev:latest \
+          --build-arg UI_USERNAME="${{ secrets.UI_USERNAME }}" \
+          --build-arg UI_PASSWORD="${{ secrets.UI_PASSWORD }}" \
+          --build-arg DB_USER="${{ secrets.DB_USER }}" \
+          --build-arg DBPASSWORD="${{ secrets.DBPASSWORD }}" \
+          --build-arg DB_URL="${{ secrets.DB_URL }}" \
+          --build-arg DRIVER_CLASS_NAME="${{ secrets.DRIVER_CLASS_NAME }}" \
+          --build-arg DEEPSEEK_API_KEY="${{ secrets.DEEPSEEK_API_KEY }}" \
+          --build-arg TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}" \
+          --build-arg TELEGRAM_BOT_NAME="${{ secrets.TELEGRAM_BOT_NAME }}" \
+          -f Dockerfile .

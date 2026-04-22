@@ -121,6 +121,14 @@ public class TaskTTService {
         return taskTTRepository.findByPjIdAndPriority(pjId, priority);
     }
 
+    public List<TaskTT> getTasksByFeature(long featureId) {
+        return taskTTRepository.findByFeatureId(featureId);
+    }
+
+    public List<TaskTT> getTasksByFeatureInActiveSprint(long featureId) {
+        return taskTTRepository.findByFeatureIdInActiveSprint(featureId);
+    }
+
     // ─── Write Operations ─────────────────────────────────────────────────
 
     /**
@@ -150,6 +158,7 @@ public class TaskTTService {
             task.setDateEndSetTask(updatedTask.getDateEndSetTask());
             task.setDateEndRealTask(updatedTask.getDateEndRealTask());
             task.setPriority(updatedTask.getPriority());
+            task.setFeatureId(updatedTask.getFeatureId());
             task.setUserId(updatedTask.getUserId());
             return taskTTRepository.save(task);
         } else {
