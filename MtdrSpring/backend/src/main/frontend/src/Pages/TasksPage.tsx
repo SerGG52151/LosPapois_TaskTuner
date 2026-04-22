@@ -7,6 +7,7 @@ import Moment from 'react-moment';
 import { FunnelIcon, CheckCircleIcon, ArrowUturnLeftIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import palette from '../theme';
+import { saveToStorage, getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 type Priority = 'alta' | 'media' | 'baja';
 
@@ -18,6 +19,18 @@ type Item = {
   storyPoints?: number;
   priority?: Priority;
 };
+
+// Fallback data in case API fails and no storage available
+const FALLBACK_ITEMS: Item[] = [
+  { id: 1, description: 'xkw', done: false, createdAt: '2026-01-14T03:22:47', storyPoints: 3, priority: 'alta' },
+  { id: 2, description: 'asjd', done: false, createdAt: '2026-07-23T18:45:12', storyPoints: 8, priority: 'media' },
+  { id: 3, description: 'qp', done: true, createdAt: '2025-11-02T09:10:33', storyPoints: 1, priority: 'baja' },
+  { id: 4, description: 'mvnbx', done: false, createdAt: '2026-03-08T21:33:05', storyPoints: 5, priority: 'alta' },
+  { id: 5, description: 'pt', done: true, createdAt: '2025-09-17T14:57:51', storyPoints: 2, priority: 'media' },
+  { id: 6, description: 'bnmz', done: false, createdAt: '2026-06-01T07:12:29', storyPoints: 13, priority: 'baja' },
+  { id: 7, description: 'rwq', done: false, createdAt: '2026-02-19T11:05:58', storyPoints: 5, priority: 'alta' },
+  { id: 8, description: 'lkjh', done: true, createdAt: '2025-12-25T16:40:03', storyPoints: 3, priority: 'media' },
+];
 
 const priorityColors: Record<Priority, { bg: string; text: string }> = {
   alta: { bg: '#fee2e2', text: '#dc2626' },
@@ -74,11 +87,16 @@ const filterOptionStyle: React.CSSProperties = {
 };
 
 export default function TasksPage() {
-  const [isLoading, setLoading] = useState<boolean>(false);
+  const [isLoading, setLoading] = useState<boolean>(true);
   const [isInserting, setInserting] = useState<boolean>(false);
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<Item[]>(() => {
+    // Initialize with stored data or fallback
+    const stored = getFromStorage<Item[]>(STORAGE_KEYS.TASKS);
+    return stored || FALLBACK_ITEMS;
+  });
   const [error, setError] = useState<any>();
   const [showFilter, setShowFilter] = useState(false);
+  const [isUsingFallback, setIsUsingFallback] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -92,23 +110,23 @@ export default function TasksPage() {
   }, []);
 
   function deleteItem(deleteId: number | string) {
+    // Optimistic update
+    const remainingItems = items.filter(item => item.id !== deleteId);
+    setItems(remainingItems);
+    saveToStorage(STORAGE_KEYS.TASKS, remainingItems);
+
+    // Try to sync with API
     fetch(`${API_LIST}/${deleteId}`, { method: 'DELETE' })
       .then(response => {
-        if (response.ok) {
-          return response;
-        } else {
+        if (!response.ok) {
           throw new Error('Something went wrong ...');
         }
       })
-      .then(
-        () => {
-          const remainingItems = items.filter(item => item.id !== deleteId);
-          setItems(remainingItems);
-        },
-        (error) => {
-          setError(error);
-        }
-      );
+      .catch((error) => {
+        setError(error);
+        // Revert on error
+        setItems(prevItems => [...prevItems, { id: deleteId } as Item]);
+      });
   }
 
   function toggleDone(event: React.MouseEvent, id: number | string, description?: string, done?: boolean) {
@@ -119,7 +137,7 @@ export default function TasksPage() {
     );
   }
 
-  function reloadOneItem(id: number | string){
+  function reloadOneItem(id: number | string) {
     fetch(`${API_LIST}/${id}`)
       .then(response => {
         if (response.ok) {
@@ -134,6 +152,7 @@ export default function TasksPage() {
             x => (x.id === id ? { ...x, 'description': result.description, 'done': result.done } : x)
           );
           setItems(items2);
+          saveToStorage(STORAGE_KEYS.TASKS, items2);
         },
         (error) => {
           setError(error);
@@ -158,7 +177,9 @@ export default function TasksPage() {
 
   useEffect(() => {
     setLoading(true);
-    fetch(API_LIST)
+    const controller = new AbortController();
+    
+    fetch(API_LIST, { signal: controller.signal })
       .then(response => {
         if (response.ok) {
           return response.json();
@@ -170,48 +191,86 @@ export default function TasksPage() {
         (result) => {
           setLoading(false);
           setItems(result);
+          setIsUsingFallback(false);
+          // Save to storage for future use
+          saveToStorage(STORAGE_KEYS.TASKS, result);
         },
-        () => {
+        (error) => {
+          if (error.name === 'AbortError') return;
+          
           setLoading(false);
-          setItems([
-            { id: 1, description: 'xkw', done: false, createdAt: '2026-01-14T03:22:47', storyPoints: 3, priority: 'alta' },
-            { id: 2, description: 'asjd', done: false, createdAt: '2026-07-23T18:45:12', storyPoints: 8, priority: 'media' },
-            { id: 3, description: 'qp', done: true, createdAt: '2025-11-02T09:10:33', storyPoints: 1, priority: 'baja' },
-            { id: 4, description: 'mvnbx', done: false, createdAt: '2026-03-08T21:33:05', storyPoints: 5, priority: 'alta' },
-            { id: 5, description: 'pt', done: true, createdAt: '2025-09-17T14:57:51', storyPoints: 2, priority: 'media' },
-            { id: 6, description: 'bnmz', done: false, createdAt: '2026-06-01T07:12:29', storyPoints: 13, priority: 'baja' },
-            { id: 7, description: 'rwq', done: false, createdAt: '2026-02-19T11:05:58', storyPoints: 5, priority: 'alta' },
-            { id: 8, description: 'lkjh', done: true, createdAt: '2025-12-25T16:40:03', storyPoints: 3, priority: 'media' },
-          ]);
+          console.error('Failed to fetch tasks:', error);
+          
+          // Try to use stored data
+          const stored = getFromStorage<Item[]>(STORAGE_KEYS.TASKS);
+          if (stored) {
+            setItems(stored);
+            setIsUsingFallback(false);
+            console.log('Using stored tasks data');
+          } else {
+            // Use fallback
+            setItems(FALLBACK_ITEMS);
+            setIsUsingFallback(true);
+            console.log('Using fallback tasks data');
+          }
+          
+          setError({
+            message: 'Could not fetch tasks. Using cached or sample data.',
+            isOffline: true
+          });
         }
       );
+
+    return () => {
+      controller.abort();
+    };
   }, []);
 
-  function addItem(text: string){
+  function addItem(text: string) {
     setInserting(true);
+    const newId = `temp_${Date.now()}`;
+    const newItem: Item = { 
+      id: newId, 
+      description: text, 
+      done: false, 
+      createdAt: new Date().toISOString() 
+    };
+
+    // Optimistic update
+    setItems([newItem, ...items]);
+    const updatedItems = [newItem, ...items];
+    saveToStorage(STORAGE_KEYS.TASKS, updatedItems);
+
     const data: any = { description: text };
     fetch(API_LIST, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    }).then((response) => {
-      if (response.ok) {
-        return response;
-      } else {
-        throw new Error('Something went wrong ...');
-      }
-    }).then(
-      (result) => {
-        const id = result.headers.get('location');
-        const newItem: Item = { id: id ?? undefined, description: text };
-        setItems([newItem, ...items]);
-        setInserting(false);
-      },
-      (error) => {
-        setInserting(false);
-        setError(error);
-      }
-    );
+    })
+      .then((response) => {
+        if (response.ok) {
+          return response;
+        } else {
+          throw new Error('Something went wrong ...');
+        }
+      })
+      .then(
+        (result) => {
+          const id = result.headers.get('location');
+          // Update the temp ID with real ID
+          const finalItems = items.map(item =>
+            item.id === newId ? { ...item, id: id ?? newId } : item
+          );
+          setItems(finalItems);
+          saveToStorage(STORAGE_KEYS.TASKS, finalItems);
+          setInserting(false);
+        },
+        (error) => {
+          setInserting(false);
+          setError(error);
+          // Keep the item with temp ID - user can retry
+        }
+      );
   }
 
   return (
@@ -219,7 +278,7 @@ export default function TasksPage() {
       <h1>Mis Tareas</h1>
       <div style={{ display: 'flex', width: '95%', alignItems: 'center', gap: '8px' }}>
         <div style={{ flex: 1 }}>
-          <NewItem addItem={addItem} isInserting={isInserting}/>
+          <NewItem addItem={addItem} isInserting={isInserting} />
         </div>
         <div ref={filterRef} style={{ position: 'relative' }}>
           <button
@@ -264,68 +323,84 @@ export default function TasksPage() {
           )}
         </div>
       </div>
-      { error && <p>Error: {error.message}</p> }
-      { isLoading && <CircularProgress /> }
-      { !isLoading &&
+
+      {error && (
+        <div style={{
+          padding: '12px 16px',
+          margin: '12px 0',
+          backgroundColor: error.isOffline ? '#fef3c7' : '#fee2e2',
+          border: `1px solid ${error.isOffline ? '#f59e0b' : '#ef4444'}`,
+          color: error.isOffline ? '#92400e' : '#991b1b',
+          borderRadius: '6px',
+          fontSize: '14px'
+        }}>
+          {error.message || `Error: ${error}`}
+          {isUsingFallback && ' (Datos de ejemplo)'}
+        </div>
+      )}
+
+      {isLoading && <CircularProgress />}
+      
+      {!isLoading && (
         <div id="maincontent">
           <table id="itemlistNotDone" className="itemlist">
             <TableBody>
-            {items.map(item => (
-              !item.done && (
-                <tr key={String(item.id)}>
-                  <td className="description">{item.description}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}><StoryPointsBadge points={item.storyPoints} /></td>
-                  <td style={{ whiteSpace: 'nowrap' }}><PriorityBadge priority={item.priority} /></td>
-                  <td className="date"><Moment format="MMM Do hh:mm:ss">{item.createdAt}</Moment></td>
-                  <td>
-                    <button
-                      onClick={(e) => toggleDone(e as any, item.id ?? '', item.description, true)}
-                      title="Marcar como completada"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-                    >
-                      <CheckCircleIcon style={{ height: '22px', width: '22px', color: palette.primary }} />
-                    </button>
-                  </td>
-                </tr>
-              )
-            ))}
+              {items.map(item => (
+                !item.done && (
+                  <tr key={String(item.id)}>
+                    <td className="description">{item.description}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}><StoryPointsBadge points={item.storyPoints} /></td>
+                    <td style={{ whiteSpace: 'nowrap' }}><PriorityBadge priority={item.priority} /></td>
+                    <td className="date"><Moment format="MMM Do hh:mm:ss">{item.createdAt}</Moment></td>
+                    <td>
+                      <button
+                        onClick={(e) => toggleDone(e as any, item.id ?? '', item.description, true)}
+                        title="Marcar como completada"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+                      >
+                        <CheckCircleIcon style={{ height: '22px', width: '22px', color: palette.primary }} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              ))}
             </TableBody>
           </table>
           <h2 id="donelist">Completadas</h2>
           <table id="itemlistDone" className="itemlist">
             <TableBody>
-            {items.map(item => (
-              item.done && (
-                <tr key={String(item.id)} style={{ opacity: 0.6 }}>
-                  <td className="description" style={{ textDecoration: 'line-through' }}>{item.description}</td>
-                  <td style={{ whiteSpace: 'nowrap' }}><StoryPointsBadge points={item.storyPoints} /></td>
-                  <td style={{ whiteSpace: 'nowrap' }}><PriorityBadge priority={item.priority} /></td>
-                  <td className="date"><Moment format="MMM Do hh:mm:ss">{item.createdAt}</Moment></td>
-                  <td>
-                    <button
-                      onClick={(e) => toggleDone(e as any, item.id ?? '', item.description, false)}
-                      title="Reactivar tarea"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-                    >
-                      <ArrowUturnLeftIcon style={{ height: '20px', width: '20px', color: '#d97706' }} />
-                    </button>
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => deleteItem(item.id ?? '')}
-                      title="Eliminar tarea"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-                    >
-                      <TrashIcon style={{ height: '20px', width: '20px', color: '#dc2626' }} />
-                    </button>
-                  </td>
-                </tr>
-              )
-            ))}
+              {items.map(item => (
+                item.done && (
+                  <tr key={String(item.id)} style={{ opacity: 0.6 }}>
+                    <td className="description" style={{ textDecoration: 'line-through' }}>{item.description}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}><StoryPointsBadge points={item.storyPoints} /></td>
+                    <td style={{ whiteSpace: 'nowrap' }}><PriorityBadge priority={item.priority} /></td>
+                    <td className="date"><Moment format="MMM Do hh:mm:ss">{item.createdAt}</Moment></td>
+                    <td>
+                      <button
+                        onClick={(e) => toggleDone(e as any, item.id ?? '', item.description, false)}
+                        title="Reactivar tarea"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+                      >
+                        <ArrowUturnLeftIcon style={{ height: '20px', width: '20px', color: '#d97706' }} />
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => deleteItem(item.id ?? '')}
+                        title="Eliminar tarea"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+                      >
+                        <TrashIcon style={{ height: '20px', width: '20px', color: '#dc2626' }} />
+                      </button>
+                    </td>
+                  </tr>
+                )
+              ))}
             </TableBody>
           </table>
         </div>
-      }
+      )}
     </div>
   );
 }

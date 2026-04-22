@@ -3,8 +3,8 @@ import { Bars3Icon, XMarkIcon, ArrowRightStartOnRectangleIcon } from '@heroicons
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const navigation = [
-  { name: 'Tareas', href: '/tasks' },
-  { name: 'Proyectos', href: '/projects' },
+  { name: 'Tareas', href: '/dashboard' },
+  { name: 'Proyectos', href: '/project-dashboard' },
   { name: 'Equipo', href: '/team' },
   { name: 'Perfil', href: '/profile' },
 ]

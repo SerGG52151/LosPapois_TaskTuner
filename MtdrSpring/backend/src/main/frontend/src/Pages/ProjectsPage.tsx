@@ -8,6 +8,7 @@ import {
   ChartBarIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import { saveToStorage, getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 type Project = {
   id: number;
@@ -21,13 +22,13 @@ type Sprint = {
   taskCount: number;
 };
 
-const mockProjects: Project[] = [
+const INITIAL_PROJECTS: Project[] = [
   { id: 1, name: 'Sistema de Gestión de Inventario' },
   { id: 2, name: 'App de Delivery' },
   { id: 3, name: 'Portal de Clientes' },
 ];
 
-const mockSprint: Sprint = {
+const INITIAL_SPRINT: Sprint = {
   id: 3,
   name: 'Sprint 3',
   endDate: '4 abr 2026',
@@ -142,11 +143,40 @@ function NewSprintModal({
 }
 
 export default function ProjectsPage() {
-  const [selectedProject, setSelectedProject] = useState<Project>(mockProjects[0]);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const stored = getFromStorage<Project[]>(STORAGE_KEYS.PROJECTS);
+    return stored || INITIAL_PROJECTS;
+  });
+
+  const [selectedProject, setSelectedProject] = useState<Project>(() => {
+    const stored = getFromStorage<Project>(STORAGE_KEYS.CURRENT_PROJECT);
+    return stored || projects[0] || INITIAL_PROJECTS[0];
+  });
+
+  const [currentSprint, setCurrentSprint] = useState<Sprint>(() => {
+    const stored = getFromStorage<Sprint>(STORAGE_KEYS.CURRENT_SPRINT);
+    return stored || INITIAL_SPRINT;
+  });
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
   const [showNewSprint, setShowNewSprint] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Persist projects when they change
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.PROJECTS, projects);
+  }, [projects]);
+
+  // Persist selected project
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.CURRENT_PROJECT, selectedProject);
+  }, [selectedProject]);
+
+  // Persist current sprint
+  useEffect(() => {
+    saveToStorage(STORAGE_KEYS.CURRENT_SPRINT, currentSprint);
+  }, [currentSprint]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -176,7 +206,7 @@ export default function ProjectsPage() {
 
             {dropdownOpen && (
               <div className="absolute z-20 mt-2 w-full rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
-                {mockProjects.map((project) => (
+                {projects.map((project) => (
                   <button
                     key={project.id}
                     onClick={() => {
@@ -213,15 +243,15 @@ export default function ProjectsPage() {
 
         <div className="flex items-center justify-between rounded-2xl border border-gray-100 bg-white px-6 py-5 shadow-sm">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">{mockSprint.name}</h2>
+            <h2 className="text-2xl font-bold text-gray-900">{currentSprint.name}</h2>
             <div className="mt-2 flex items-center gap-6 text-sm text-gray-500">
               <span className="flex items-center gap-1.5">
                 <CalendarDaysIcon className="size-4" />
-                Finaliza: {mockSprint.endDate}
+                Finaliza: {currentSprint.endDate}
               </span>
               <span className="flex items-center gap-1.5">
                 <ChartBarIcon className="size-4" />
-                {mockSprint.taskCount} tareas
+                {currentSprint.taskCount} tareas
               </span>
             </div>
           </div>
@@ -270,7 +300,7 @@ export default function ProjectsPage() {
 
       {showNewProject && <NewProjectModal onClose={() => setShowNewProject(false)} />}
       {showNewSprint && (
-        <NewSprintModal currentSprint={mockSprint} onClose={() => setShowNewSprint(false)} />
+        <NewSprintModal currentSprint={currentSprint} onClose={() => setShowNewSprint(false)} />
       )}
     </div>
   );
