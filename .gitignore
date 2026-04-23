@@ -54,4 +54,4 @@ yarn-error.log*
 /MtdrSpring/run-staging-locally.sh
 /MtdrSpring/backend/logs.log*
 /MtdrSpring/setup-local.sh
-MtdrSpring/backend/run-staging-locally.sh
+/MtdrSpring/backend/run-staging-locally.sh
