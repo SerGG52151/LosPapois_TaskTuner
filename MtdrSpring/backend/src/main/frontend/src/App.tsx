@@ -19,11 +19,10 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<LoginPage/>} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/dashboard" element={<TasksPage/>} />
+        <Route path="/tasks" element={<TasksPage/>} />
+        <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/team" element={<TeamPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/project-dashboard" element={<ProjectsPage />} />
-        <Route path="/signup" element={<SignupPage/>} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </div>

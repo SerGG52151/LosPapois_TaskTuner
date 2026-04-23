@@ -46,7 +46,7 @@ export default function useLogin(): UseLoginReturn {
           saveToStorage(STORAGE_KEYS.AUTH_TOKEN, user.token);
         }
         
-        navigate('/dashboard');
+        navigate('/tasks');
       } else {
         const errorData = await response.json();
         if (isMountedRef.current) {
