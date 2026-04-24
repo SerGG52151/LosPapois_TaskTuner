@@ -7,10 +7,14 @@ import ProfilePage from './Pages/ProfilePage';
 import TeamPage from './Pages/TeamPage';
 import ProjectsPage from './Pages/ProjectsPage';
 import Navigation from './Components/Navigation';
+import useInactivityLogout from './Hooks/useInactivityLogout';
 
 function App() {
   const location = useLocation();
   const showNavigation = location.pathname !== '/login' && location.pathname !== '/signup';
+  
+  // Initialize inactivity logout check (runs on app load)
+  useInactivityLogout();
 
   return (
     <div>
