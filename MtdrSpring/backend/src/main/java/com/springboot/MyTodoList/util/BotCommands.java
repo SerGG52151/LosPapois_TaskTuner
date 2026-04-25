@@ -15,7 +15,9 @@ public enum BotCommands {
 	EDIT_TASK("/edittask"),
 	LLM_REQ("/llm"),
 	ASK_COMMAND("/ask"),
-	ADD_FEATURE("/addfeature");
+	ADD_FEATURE("/addfeature"),
+	EDIT_FEATURE("/editfeature"),
+	AI_CREATE("/aicreate");
 
 	private final String command;
 

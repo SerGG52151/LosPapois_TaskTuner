@@ -18,8 +18,11 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.springboot.MyTodoList.model.FeatureTT;
 import com.springboot.MyTodoList.model.ProjectTT;
+import com.springboot.MyTodoList.model.ProjectUserTT;
 import com.springboot.MyTodoList.model.SprintTT;
 import com.springboot.MyTodoList.model.TaskTT;
 import com.springboot.MyTodoList.model.ToDoItem;
@@ -28,6 +31,7 @@ import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.GroqService;
 import com.springboot.MyTodoList.service.FeatureTTService;
 import com.springboot.MyTodoList.service.ProjectTTService;
+import com.springboot.MyTodoList.service.ProjectUserTTService;
 import com.springboot.MyTodoList.service.SprintTTService;
 import com.springboot.MyTodoList.service.SprintTaskTTService;
 import com.springboot.MyTodoList.service.TaskTTService;
@@ -58,14 +62,18 @@ public class BotActions {
     UserTTService userTTService;
     SprintTTService sprintTTService;
     ProjectTTService projectTTService;
+    ProjectUserTTService projectUserTTService;
     SprintTaskTTService sprintTaskTTService;
     TaskTTService taskTTService;
     FeatureTTService featureTTService;
 
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+
     public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds,
                       GroqService gs,
                       UserTTService uts, SprintTTService stts,
-                      ProjectTTService ptts, SprintTaskTTService sttts,
+                      ProjectTTService ptts, ProjectUserTTService puts,
+                      SprintTaskTTService sttts,
                       TaskTTService ttts, FeatureTTService ftts) {
         telegramClient = tc;
         todoService = ts;
@@ -74,6 +82,7 @@ public class BotActions {
         userTTService = uts;
         sprintTTService = stts;
         projectTTService = ptts;
+        projectUserTTService = puts;
         sprintTaskTTService = sttts;
         taskTTService = ttts;
         featureTTService = ftts;
@@ -211,6 +220,10 @@ public class BotActions {
                 InlineKeyboardButton.builder()
                     .text("✏️ Edit Task")
                     .callbackData(BotCommands.EDIT_TASK.getCommand())
+                    .build(),
+                InlineKeyboardButton.builder()
+                    .text("✏️ Edit Feature")
+                    .callbackData(BotCommands.EDIT_FEATURE.getCommand())
                     .build()
             ))
             .keyboardRow(new InlineKeyboardRow(
@@ -229,6 +242,12 @@ public class BotActions {
                 InlineKeyboardButton.builder()
                     .text("🤖 Ask AI")
                     .callbackData(BotCommands.ASK_COMMAND.getCommand())
+                    .build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("✨ Create with AI")
+                    .callbackData(BotCommands.AI_CREATE.getCommand())
                     .build()
             ))
             .keyboardRow(new InlineKeyboardRow(
@@ -420,7 +439,12 @@ public class BotActions {
             case WAITING_EDIT_TASK_NEW_SP:          handleEditTaskNewSP();           break;
             case WAITING_EDIT_TASK_NEW_PRIORITY:    handleEditTaskNewPriority();     break;
             case WAITING_EDIT_TASK_NEW_SPRINT:      handleEditTaskNewSprint();       break;
+            case WAITING_EDIT_FEATURE_FIELD:        handleEditFeatureField();        break;
+            case WAITING_EDIT_FEATURE_NEW_NAME:     handleEditFeatureNewName();      break;
+            case WAITING_EDIT_FEATURE_NEW_PRIORITY: handleEditFeatureNewPriority();  break;
+            case WAITING_EDIT_FEATURE_NEW_SPRINT:   handleEditFeatureNewSprint();    break;
             case WAITING_AI_QUESTION:               handleAiQuestion();              break;
+            case WAITING_AI_CREATE_DESCRIPTION:     handleAiCreateDescription();     break;
             default: break;
         }
     }
@@ -621,12 +645,32 @@ public class BotActions {
         BotHelper.sendMessageToTelegramButtons(chatId, BotMessages.SELECT_SPRINT.getMessage(), telegramClient, builder.build());
     }
 
+    /**
+     * Returns the project ID of the authenticated user.
+     * Since a developer belongs to exactly one project, we take the first membership.
+     * Returns 0 if the user has no project assignment.
+     */
+    private long getUserProjectId() {
+        if (!isUserAuthenticated()) return 0;
+        UserTT user = getAuthenticatedUser();
+        List<ProjectUserTT> memberships = projectUserTTService.getProjectsForUser(user.getUserId());
+        return memberships.isEmpty() ? 0 : memberships.get(0).getPjId();
+    }
+
     private List<SprintTT> getAvailableSprints() {
-        List<SprintTT> available = sprintTTService.findAll().stream()
+        long pjId = getUserProjectId();
+
+        // Only show sprints from the user's project; fall back to all if not assigned
+        List<SprintTT> source = pjId > 0
+            ? sprintTTService.getSprintsByProject(pjId)
+            : sprintTTService.findAll();
+
+        List<SprintTT> available = source.stream()
             .filter(s -> !"done".equals(s.getStateSprint()))
             .collect(Collectors.toList());
 
-        if (available.isEmpty()) {
+        // Seed only when user has no project (dev/demo fallback)
+        if (available.isEmpty() && pjId == 0) {
             seedSprints();
             available = sprintTTService.findAll().stream()
                 .filter(s -> !"done".equals(s.getStateSprint()))
@@ -1299,6 +1343,208 @@ public class BotActions {
         exit = true;
     }
 
+    // ─── Feature edit flow ───────────────────────────────────────────────
+
+    public void fnShowEditFeaturePicker() {
+        if (exit) return;
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        if (!requestText.trim().equals(BotCommands.EDIT_FEATURE.getCommand())) return;
+
+        long pjId = getUserProjectId();
+        SprintTT active = pjId > 0
+            ? sprintTTService.getActiveSprintForProject(pjId).getBody()
+            : null;
+
+        List<FeatureTT> features = active != null
+            ? featureTTService.getFeaturesBySprint(active.getSprId())
+            : java.util.Collections.emptyList();
+
+        if (features.isEmpty()) {
+            BotHelper.sendMessageToTelegram(chatId,
+                "🗂 No features in the active sprint to edit.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        var builder = InlineKeyboardMarkup.builder();
+        for (FeatureTT f : features) {
+            String label = prioEmoji(f.getPriorityFeature()) + " " + f.getNameFeature();
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text(label)
+                    .callbackData("EDIT_FEAT_PICK:" + f.getFeatureId())
+                    .build()
+            ));
+        }
+        BotHelper.sendMessageToTelegramButtons(chatId, "✏️ Select a feature to edit:", telegramClient, builder.build());
+        exit = true;
+    }
+
+    public void fnEditPickFeature() {
+        if (exit) return;
+        if (!requestText.startsWith("EDIT_FEAT_PICK:")) return;
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        long featureId;
+        try {
+            featureId = Long.parseLong(requestText.substring(15));
+        } catch (NumberFormatException e) {
+            BotHelper.sendMessageToTelegram(chatId, "Invalid feature.", telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        BotFeatureDraft draft = new BotFeatureDraft();
+        draft.setFeatureId(featureId);
+        featureDrafts.put(chatId, draft);
+        setCurrentState(BotConversationState.WAITING_EDIT_FEATURE_FIELD);
+        showEditFeatureFieldButtons();
+        exit = true;
+    }
+
+    private void showEditFeatureFieldButtons() {
+        InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("📝 Name").callbackData("EDIT_FEAT_FIELD:name").build(),
+                InlineKeyboardButton.builder().text("🎯 Priority").callbackData("EDIT_FEAT_FIELD:priority").build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("🔄 Sprint").callbackData("EDIT_FEAT_FIELD:sprint").build()
+            ))
+            .build();
+        BotHelper.sendMessageToTelegramButtons(chatId, "What would you like to edit?", telegramClient, keyboard);
+    }
+
+    private void handleEditFeatureField() {
+        if (!requestText.startsWith("EDIT_FEAT_FIELD:")) {
+            showEditFeatureFieldButtons();
+            exit = true;
+            return;
+        }
+        String field = requestText.substring(16);
+        switch (field) {
+            case "name":
+                setCurrentState(BotConversationState.WAITING_EDIT_FEATURE_NEW_NAME);
+                BotHelper.sendMessageToTelegram(chatId, "📝 Enter the new feature name:", telegramClient, null);
+                break;
+            case "priority":
+                setCurrentState(BotConversationState.WAITING_EDIT_FEATURE_NEW_PRIORITY);
+                showFeaturePriorityButtons();
+                break;
+            case "sprint":
+                setCurrentState(BotConversationState.WAITING_EDIT_FEATURE_NEW_SPRINT);
+                showFeatureSprintSelection();
+                break;
+            default:
+                BotHelper.sendMessageToTelegram(chatId, "Invalid option.", telegramClient, null);
+        }
+        exit = true;
+    }
+
+    private void handleEditFeatureNewName() {
+        BotFeatureDraft draft = featureDrafts.get(chatId);
+        if (draft == null || draft.getFeatureId() == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error. Try again with /editfeature.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        FeatureTT feature = featureTTService.getFeatureById(draft.getFeatureId()).getBody();
+        if (feature == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Feature not found.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        feature.setNameFeature(requestText.trim());
+        featureTTService.updateFeature(feature.getFeatureId(), feature);
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId, "✅ Feature name updated!", telegramClient, null);
+        showMainMenu();
+        exit = true;
+    }
+
+    private void handleEditFeatureNewPriority() {
+        if (!requestText.startsWith("FPRIO:")) {
+            showFeaturePriorityButtons();
+            exit = true;
+            return;
+        }
+        String priority = requestText.substring(6);
+        if (!priority.equals("low") && !priority.equals("medium") && !priority.equals("high")) {
+            showFeaturePriorityButtons();
+            exit = true;
+            return;
+        }
+        BotFeatureDraft draft = featureDrafts.get(chatId);
+        if (draft == null || draft.getFeatureId() == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error. Try again with /editfeature.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        FeatureTT feature = featureTTService.getFeatureById(draft.getFeatureId()).getBody();
+        if (feature == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Feature not found.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        feature.setPriorityFeature(priority);
+        featureTTService.updateFeature(feature.getFeatureId(), feature);
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId, "✅ Priority updated to " + prioEmoji(priority) + "!", telegramClient, null);
+        showMainMenu();
+        exit = true;
+    }
+
+    private void handleEditFeatureNewSprint() {
+        if (!requestText.startsWith("FSPRINT:")) {
+            showFeatureSprintSelection();
+            exit = true;
+            return;
+        }
+        long newSprintId;
+        try {
+            newSprintId = Long.parseLong(requestText.substring(8));
+        } catch (NumberFormatException e) {
+            showFeatureSprintSelection();
+            exit = true;
+            return;
+        }
+        BotFeatureDraft draft = featureDrafts.get(chatId);
+        if (draft == null || draft.getFeatureId() == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Error. Try again with /editfeature.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        FeatureTT feature = featureTTService.getFeatureById(draft.getFeatureId()).getBody();
+        SprintTT newSprint = sprintTTService.getSprintById(newSprintId).getBody();
+        if (feature == null || newSprint == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Feature or sprint not found.", telegramClient, null);
+            exit = true;
+            return;
+        }
+        feature.setSprId(newSprintId);
+        featureTTService.updateFeature(feature.getFeatureId(), feature);
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId,
+            "🔄 Feature moved to *" + newSprint.getNameSprint() + "* successfully!", telegramClient, null);
+        showMainMenu();
+        exit = true;
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────
 
     private int priorityWeight(String priority) {
@@ -1608,6 +1854,159 @@ public class BotActions {
 
         clearConversationState();
         showMainMenu();
+    }
+
+    // ─── AI creation flow ────────────────────────────────────────────────
+
+    private static final String AI_CREATION_SYSTEM_PROMPT =
+        "You are a task/feature parser for a project management bot. "
+        + "Parse the user's request and return ONLY a single-line JSON object. "
+        + "No explanation, no markdown, no extra text.\n\n"
+        + "Task format:   {\"type\":\"task\",\"name\":\"<name>\",\"storyPoints\":<int>,\"priority\":\"low|medium|high\"}\n"
+        + "Feature format:{\"type\":\"feature\",\"name\":\"<name>\",\"priority\":\"low|medium|high\"}\n"
+        + "Unknown format:{\"type\":\"unknown\",\"message\":\"<brief question to clarify, same language as input>\"}\n\n"
+        + "Rules:\n"
+        + "- name: short description of the work item\n"
+        + "- storyPoints: integer 1-20; estimate from complexity hints; default 3 if unclear\n"
+        + "- priority: infer from urgency words; default \"medium\" if not specified\n"
+        + "- Respond ONLY with the JSON object on one line";
+
+    /** Entry point for the '✨ Create with AI' button. */
+    public void fnAiCreate() {
+        if (exit) return;
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
+            exit = true;
+            return;
+        }
+        if (!requestText.trim().equals(BotCommands.AI_CREATE.getCommand())) return;
+
+        if (groqService == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ASK_AI_DISABLED.getMessage(), telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        setCurrentState(BotConversationState.WAITING_AI_CREATE_DESCRIPTION);
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.AI_CREATE_PROMPT.getMessage(), telegramClient, null);
+        exit = true;
+    }
+
+    /** Called when user sends description while in WAITING_AI_CREATE_DESCRIPTION state. */
+    private void handleAiCreateDescription() {
+        if (groqService == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ASK_AI_DISABLED.getMessage(), telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+            return;
+        }
+
+        String raw = sanitizeAiInput(requestText.trim());
+        if (raw == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ASK_AI_EMPTY_QUESTION.getMessage(), telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.AI_CREATE_PARSING.getMessage(), telegramClient, null);
+
+        String aiResponse;
+        try {
+            aiResponse = groqService.ask(AI_CREATION_SYSTEM_PROMPT, raw);
+        } catch (Exception e) {
+            logger.error("Groq creation parse failed: {}", e.getMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId,
+                "❌ Could not reach the AI service. Try again later.", telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+            return;
+        }
+
+        // Extract JSON from response — model may wrap it in text/markdown
+        String jsonStr = extractJson(aiResponse);
+        if (jsonStr == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.AI_CREATE_UNKNOWN.getMessage(), telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+            return;
+        }
+
+        try {
+            JsonNode node = JSON_MAPPER.readTree(jsonStr);
+            String type = node.path("type").asText("unknown");
+
+            if ("task".equals(type)) {
+                String name      = node.path("name").asText("New Task");
+                int storyPoints  = node.path("storyPoints").asInt(3);
+                String priority  = node.path("priority").asText("medium");
+                if (!priority.equals("low") && !priority.equals("medium") && !priority.equals("high")) {
+                    priority = "medium";
+                }
+                storyPoints = Math.max(1, Math.min(20, storyPoints));
+
+                BotTaskDraft draft = new BotTaskDraft();
+                draft.setName(name);
+                draft.setStoryPoints(storyPoints);
+                draft.setPriority(priority);
+                taskDrafts.put(chatId, draft);
+
+                String summary = "📝 *" + name + "*\n"
+                    + "   Story Points: " + storyPoints + "\n"
+                    + "   Priority: " + prioEmoji(priority) + " " + priority;
+                BotHelper.sendMessageToTelegram(chatId,
+                    String.format(BotMessages.AI_CREATE_TASK_CONFIRM.getMessage(), summary),
+                    telegramClient, null);
+
+                // Dates will be taken from the sprint — jump directly to sprint selection
+                setCurrentState(BotConversationState.WAITING_NEW_ITEM_SPRINT);
+                showSprintSelection();
+
+            } else if ("feature".equals(type)) {
+                String name     = node.path("name").asText("New Feature");
+                String priority = node.path("priority").asText("medium");
+                if (!priority.equals("low") && !priority.equals("medium") && !priority.equals("high")) {
+                    priority = "medium";
+                }
+
+                BotFeatureDraft draft = new BotFeatureDraft();
+                draft.setName(name);
+                draft.setPriority(priority);
+                featureDrafts.put(chatId, draft);
+
+                String summary = "🗂 *" + name + "*\n"
+                    + "   Priority: " + prioEmoji(priority) + " " + priority;
+                BotHelper.sendMessageToTelegram(chatId,
+                    String.format(BotMessages.AI_CREATE_FEATURE_CONFIRM.getMessage(), summary),
+                    telegramClient, null);
+
+                setCurrentState(BotConversationState.WAITING_NEW_FEATURE_SPRINT);
+                showFeatureSprintSelection();
+
+            } else {
+                String clarification = node.path("message").asText(BotMessages.AI_CREATE_UNKNOWN.getMessage());
+                BotHelper.sendMessageToTelegram(chatId, "🤖 " + clarification, telegramClient, null);
+                // Stay in WAITING_AI_CREATE_DESCRIPTION so user can retry
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to parse AI creation JSON: {}", e.getMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.AI_CREATE_UNKNOWN.getMessage(), telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+        }
+        exit = true;
+    }
+
+    /**
+     * Extract the first JSON object from an AI response string.
+     * The model sometimes wraps JSON in backticks or prose.
+     */
+    private String extractJson(String text) {
+        if (text == null) return null;
+        int start = text.indexOf('{');
+        int end   = text.lastIndexOf('}');
+        if (start == -1 || end == -1 || end <= start) return null;
+        return text.substring(start, end + 1);
     }
 
     public void fnElse() {

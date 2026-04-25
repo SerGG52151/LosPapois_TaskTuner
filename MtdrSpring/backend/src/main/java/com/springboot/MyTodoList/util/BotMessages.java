@@ -39,7 +39,14 @@ public enum BotMessages {
 	ASK_AI_PROMPT("🤖 Ask me anything about your tasks, sprint, or project progress:"),
 	ASK_AI_DISABLED("The AI assistant is currently unavailable."),
 	ASK_AI_THINKING("🤔 Thinking..."),
-	ASK_AI_EMPTY_QUESTION("Please type a project-related question.");
+	ASK_AI_EMPTY_QUESTION("Please type a project-related question."),
+	AI_CREATE_PROMPT("🤖 Describe what you want to create. Examples:\n• \"Fix login bug, 3 story points, high priority\"\n• \"Feature: user authentication, medium priority\""),
+	AI_CREATE_PARSING("🤔 Parsing your request..."),
+	AI_CREATE_TASK_CONFIRM("✅ I'll create this task:\n%s\nReply *confirm* to save or *cancel* to abort."),
+	AI_CREATE_FEATURE_CONFIRM("✅ I'll create this feature:\n%s\nReply *confirm* to save or *cancel* to abort."),
+	AI_CREATE_UNKNOWN("❓ I could not understand what to create. Try again or use the manual buttons."),
+	AI_CREATE_CONFIRMED("✅ Created! Now select the sprint:"),
+	AI_CREATE_CANCELLED("❌ Creation cancelled.");
 
 	private String message;
 
