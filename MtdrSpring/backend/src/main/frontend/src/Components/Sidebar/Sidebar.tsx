@@ -60,7 +60,9 @@ function Sidebar({ isOpen }: SidebarProps) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/projects/open')
+    // /api/projects (no /open) returns ALL projects, including closed ones.
+    // The sidebar shows everything so archived/closed projects stay reachable.
+    fetch('/api/projects')
       .then(res => (res.ok ? res.json() : null))
       .then((data: ProjectDTO[] | null) => {
         if (cancelled || !data || data.length === 0) return;
@@ -83,18 +85,45 @@ function Sidebar({ isOpen }: SidebarProps) {
 
   // Single shared "Add Sprint" modal — opened by any project group via the
   // onAddSprint callback. Tracks which project the new sprint belongs to so
-  // the eventual POST has the right parent ID.
+  // the POST has the right parent ID.
   const [addSprintFor, setAddSprintFor] = useState<number | null>(null);
   const openAddSprint = useCallback(
     (pid: number) => setAddSprintFor(pid),
     []
   );
   const closeAddSprint = useCallback(() => setAddSprintFor(null), []);
+
+  // Per-project version counter — bumped after a successful sprint creation
+  // for *that project*, so its SidebarProjectGroup re-fetches sprints. Other
+  // groups stay unaffected (no wasted refetches).
+  const [sprintVersions, setSprintVersions] = useState<Record<number, number>>({});
+
   const handleCreateSprint = useCallback(
-    (data: NewSprintData) => {
-      // Visual-only stub — replace with POST /api/projects/:id/sprints
-      // and a refresh of the sprints list when the endpoint exists.
-      console.log('[Sidebar] create sprint for project', addSprintFor, data);
+    async (data: NewSprintData) => {
+      if (addSprintFor === null) return;
+      try {
+        const res = await fetch('/api/sprints', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nameSprint:   data.name,
+            dateStartSpr: data.startDate,
+            dateEndSpr:   data.endDate,
+            taskGoal:     null,
+            stateSprint:  'active',
+            pjId:         addSprintFor,
+          }),
+        });
+        if (!res.ok) throw new Error(`POST /api/sprints failed: ${res.status}`);
+        // Trigger a re-fetch of just this project's sprints.
+        setSprintVersions(prev => ({
+          ...prev,
+          [addSprintFor]: (prev[addSprintFor] ?? 0) + 1,
+        }));
+      } catch (err) {
+        // TODO: surface to the user via toast/snackbar.
+        console.error('[Sidebar] create sprint failed', err);
+      }
     },
     [addSprintFor]
   );
@@ -134,6 +163,7 @@ function Sidebar({ isOpen }: SidebarProps) {
                 // discoverable on first paint. Subsequent groups stay collapsed.
                 defaultOpen={idx === 0}
                 onAddSprint={openAddSprint}
+                refreshToken={sprintVersions[p.pjId] ?? 0}
               />
             ))
           )}

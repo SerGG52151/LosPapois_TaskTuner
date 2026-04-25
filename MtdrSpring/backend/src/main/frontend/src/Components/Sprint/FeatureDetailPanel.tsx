@@ -1,11 +1,13 @@
 import React from 'react';
-import { DocumentTextIcon } from '@heroicons/react/24/outline';
+import { ChevronRightIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 
 export type PriorityTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 export interface FeatureTaskLite {
   id: number;
   name: string;
+  /** Long-text description (TaskTT.infoTask). Optional — empty/null = no body shown. */
+  description?: string | null;
 }
 
 export interface FeatureDetailData {
@@ -30,6 +32,52 @@ const PRIORITY_TEXT: Record<PriorityTone, string> = {
   info:    'text-blue-500',
   neutral: 'text-gray-700',
 };
+
+/**
+ * Single task row in the "Tareas Asociadas" list.
+ *
+ * Behaviour:
+ *   - No description → renders as a plain row, not interactive.
+ *   - With description → uses the native <details> element so the user
+ *     can click the row to expand the body. Zero JS state, fully
+ *     keyboard-accessible (Tab + Enter), respects browser print.
+ */
+function TaskItem({ task }: { task: FeatureTaskLite }) {
+  const hasDescription = !!task.description && task.description.trim().length > 0;
+
+  if (!hasDescription) {
+    return (
+      <li className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
+        {task.name}
+      </li>
+    );
+  }
+
+  return (
+    <li className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+      <details className="group">
+        <summary
+          className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer
+                     list-none select-none hover:bg-gray-50 transition-colors"
+        >
+          <span className="text-sm font-medium text-gray-800 truncate">
+            {task.name}
+          </span>
+          <ChevronRightIcon
+            className="size-4 text-gray-400 shrink-0 transition-transform duration-150
+                       group-open:rotate-90"
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="px-3 pb-3 pt-1 border-t border-gray-100">
+          <p className="text-sm text-gray-600 whitespace-pre-wrap">
+            {task.description}
+          </p>
+        </div>
+      </details>
+    </li>
+  );
+}
 
 /** One stat tile inside the gray summary block. */
 function Stat({
@@ -112,12 +160,7 @@ function FeatureDetailPanel({ feature }: FeatureDetailPanelProps) {
         {feature.tasks && feature.tasks.length > 0 ? (
           <ul className="space-y-2">
             {feature.tasks.map(t => (
-              <li
-                key={t.id}
-                className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700"
-              >
-                {t.name}
-              </li>
+              <TaskItem key={t.id} task={t} />
             ))}
           </ul>
         ) : (

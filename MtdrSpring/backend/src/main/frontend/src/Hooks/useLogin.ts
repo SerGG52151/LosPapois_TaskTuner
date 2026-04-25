@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_CONFIG } from '../config';
 import { saveToStorage, STORAGE_KEYS } from '../Utils/storage';
@@ -46,7 +46,7 @@ export default function useLogin(): UseLoginReturn {
           saveToStorage(STORAGE_KEYS.AUTH_TOKEN, user.token);
         }
         
-        navigate('/tasks');
+        navigate('/home');
       } else {
         const errorData = await response.json();
         if (isMountedRef.current) {

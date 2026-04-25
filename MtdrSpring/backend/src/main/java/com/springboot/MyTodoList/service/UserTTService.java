@@ -95,8 +95,14 @@ public class UserTTService {
             UserTT user = existing.get();
             // Only update fields the client is allowed to change:
             user.setNameUser(updatedUser.getNameUser());
-            // Hash the password if it's being updated
-            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+            // Hash + persist the password ONLY if the client provided one.
+            // Empty/null means "leave password as-is" — otherwise omitting
+            // the field from a profile-edit PUT would silently corrupt the
+            // user's stored hash and lock them out.
+            String newPassword = updatedUser.getPassword();
+            if (newPassword != null && !newPassword.isEmpty()) {
+                user.setPassword(passwordEncoder.encode(newPassword));
+            }
             user.setIdTelegram(updatedUser.getIdTelegram());
             user.setMail(updatedUser.getMail());
             user.setRole(updatedUser.getRole());

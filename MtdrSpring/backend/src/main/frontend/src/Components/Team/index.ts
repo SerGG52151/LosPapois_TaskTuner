@@ -12,4 +12,6 @@ export type {
   MemberDetailPanelProps,
   MemberDetailMember,
   MemberDetailKpis,
+  MemberTaskLite,
+  MemberTaskPriority,
 } from './MemberDetailPanel';

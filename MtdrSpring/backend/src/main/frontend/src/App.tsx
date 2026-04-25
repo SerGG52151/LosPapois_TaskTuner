@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import HomePage from './Pages/HomePage';
 import TasksPage from './Pages/TasksPage';
 import LoginPage from './Pages/LoginPage';
 import SignupPage from './Pages/SignupPage';
@@ -39,6 +40,8 @@ function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      {/* Post-login landing — project selector cards. */}
+      <Route path="/home" element={<HomePage />} />
       <Route path="/tasks" element={<TasksPage />} />
       <Route path="/projects" element={<ProjectsPage />} />
       {/* Team and Sprint are scoped to a project — the projectId / */}

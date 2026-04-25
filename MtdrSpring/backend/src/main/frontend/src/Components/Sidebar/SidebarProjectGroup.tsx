@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   CalendarDaysIcon,
   ChevronRightIcon,
@@ -8,6 +8,11 @@ import {
 } from '@heroicons/react/24/outline';
 import SidebarItem from './SidebarItem';
 import SidebarSectionLabel from './SidebarSectionLabel';
+import {
+  getFromStorage,
+  saveToStorage,
+  STORAGE_KEYS,
+} from '../../Utils/storage';
 
 export interface SprintLite {
   id: number;
@@ -17,20 +22,40 @@ export interface SprintLite {
 export interface SidebarProjectGroupProps {
   projectId: number;
   projectName: string;
-  /** Sprints to render inside the group. Defaults to mock data while the API is wired. */
-  sprints?: SprintLite[];
   /** Whether the group should start expanded (e.g. for the first project). */
   defaultOpen?: boolean;
   /** Optional callback fired when the "Add Sprint" CTA is clicked. */
   onAddSprint?: (projectId: number) => void;
+  /**
+   * External nudge to re-fetch this project's sprints — incremented by the
+   * parent after a successful sprint creation. Plain number used as a
+   * useEffect dependency, no extra plumbing needed.
+   */
+  refreshToken?: number;
 }
 
-// Visual-only mock data until the sprints endpoint is wired.
+/** Backend SprintTT shape — fields the sidebar uses (id, name) plus the */
+/** start date used for chronological sorting before render. */
+interface SprintDTO {
+  sprId: number;
+  nameSprint: string;
+  dateStartSpr: string | null;
+}
+
+/**
+ * Fallback shown when the backend can't be reached *and* the project is a
+ * mock demo (negative ID). Real projects (positive IDs) start empty and
+ * fill in once the fetch resolves.
+ */
 const MOCK_SPRINTS: SprintLite[] = [
   { id: 1, name: 'Sprint 1' },
   { id: 2, name: 'Sprint 2' },
   { id: 3, name: 'Sprint 3' },
 ];
+
+/** Per-project cache key — sprints are stored separately for each project. */
+const sprintsCacheKey = (projectId: number) =>
+  `${STORAGE_KEYS.SPRINTS}_${projectId}`;
 
 /**
  * Expandable project node inside the sidebar.
@@ -47,11 +72,50 @@ const MOCK_SPRINTS: SprintLite[] = [
 function SidebarProjectGroup({
   projectId,
   projectName,
-  sprints = MOCK_SPRINTS,
   defaultOpen = false,
   onAddSprint,
+  refreshToken = 0,
 }: SidebarProjectGroupProps) {
   const [isOpen, setIsOpen] = useState<boolean>(defaultOpen);
+
+  // Sprints are seeded from the per-project cache for instant paint, then
+  // refreshed from /api/sprints/project/{projectId} in the background.
+  // Mock projects (negative IDs) skip the fetch entirely and use MOCK_SPRINTS
+  // as their permanent display data.
+  const [sprints, setSprints] = useState<SprintLite[]>(() => {
+    if (projectId < 0) return MOCK_SPRINTS;
+    return getFromStorage<SprintLite[]>(sprintsCacheKey(projectId)) ?? [];
+  });
+
+  useEffect(() => {
+    if (projectId < 0) return; // demo project — no backend fetch
+    let cancelled = false;
+    fetch(`/api/sprints/project/${projectId}`)
+      .then(res => (res.ok ? res.json() : null))
+      .then((data: SprintDTO[] | null) => {
+        if (cancelled || !data) return;
+        // Sort chronologically by start date — sprints without a start date
+        // go last (treated as Infinity), so dated ones lead the list.
+        const sorted = [...data].sort((a, b) => {
+          const aTime = a.dateStartSpr ? new Date(a.dateStartSpr).getTime() : Infinity;
+          const bTime = b.dateStartSpr ? new Date(b.dateStartSpr).getTime() : Infinity;
+          return aTime - bTime;
+        });
+        const mapped = sorted.map<SprintLite>(s => ({
+          id: s.sprId,
+          name: s.nameSprint,
+        }));
+        setSprints(mapped);
+        saveToStorage(sprintsCacheKey(projectId), mapped);
+      })
+      .catch(() => {
+        /* Keep cached/empty sprints on failure — no UI noise. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, refreshToken]);
+
   const toggle = useCallback(() => setIsOpen(o => !o), []);
   const handleAddSprint = useCallback(() => {
     onAddSprint?.(projectId);
