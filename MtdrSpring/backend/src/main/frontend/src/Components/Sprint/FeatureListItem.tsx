@@ -49,7 +49,7 @@ function FeatureListItem({
         {developer} · {storyPoints} SPs
       </div>
       <div className="text-xs text-gray-500">
-        {completedTasks}/{totalTasks} tareas
+        {completedTasks}/{totalTasks} tasks
       </div>
     </button>
   );

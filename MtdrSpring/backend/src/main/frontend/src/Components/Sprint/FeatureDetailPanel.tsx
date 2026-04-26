@@ -34,7 +34,7 @@ const PRIORITY_TEXT: Record<PriorityTone, string> = {
 };
 
 /**
- * Single task row in the "Tareas Asociadas" list.
+ * Single task row in the "Linked Tasks" list.
  *
  * Behaviour:
  *   - No description → renders as a plain row, not interactive.
@@ -42,39 +42,19 @@ const PRIORITY_TEXT: Record<PriorityTone, string> = {
  *     can click the row to expand the body. Zero JS state, fully
  *     keyboard-accessible (Tab + Enter), respects browser print.
  */
-function TaskItem({ task }: { task: FeatureTaskLite }) {
-  const hasDescription = !!task.description && task.description.trim().length > 0;
-
-  if (!hasDescription) {
-    return (
-      <li className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
-        {task.name}
-      </li>
-    );
-  }
-
+function TaskItem({ task, onClick }: { task: FeatureTaskLite; onClick?: () => void }) {
   return (
-    <li className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <details className="group">
-        <summary
-          className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer
-                     list-none select-none hover:bg-gray-50 transition-colors"
-        >
-          <span className="text-sm font-medium text-gray-800 truncate">
-            {task.name}
-          </span>
-          <ChevronRightIcon
-            className="size-4 text-gray-400 shrink-0 transition-transform duration-150
-                       group-open:rotate-90"
-            aria-hidden="true"
-          />
-        </summary>
-        <div className="px-3 pb-3 pt-1 border-t border-gray-100">
-          <p className="text-sm text-gray-600 whitespace-pre-wrap">
-            {task.description}
-          </p>
-        </div>
-      </details>
+    <li
+      className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+      onClick={onClick}
+    >
+      <span className="text-sm font-medium text-gray-800 truncate">
+        {task.name}
+      </span>
+      <ChevronRightIcon
+        className="size-4 text-gray-400 shrink-0"
+        aria-hidden="true"
+      />
     </li>
   );
 }
@@ -99,15 +79,16 @@ function Stat({
 
 export interface FeatureDetailPanelProps {
   feature: FeatureDetailData;
+  onTaskClick?: (taskId: number) => void;
 }
 
 /**
  * Right-hand panel that explodes the selected feature into:
- *   - Title + blue "Descripción" callout
+ *   - Title + blue "Description" callout
  *   - Stats block (developer / SPs / priority / progress) + progress bar
- *   - "Tareas Asociadas" list (or empty state)
+ *   - "Linked Tasks" list (or empty state)
  */
-function FeatureDetailPanel({ feature }: FeatureDetailPanelProps) {
+function FeatureDetailPanel({ feature, onTaskClick }: FeatureDetailPanelProps) {
   const priorityClass =
     PRIORITY_TEXT[feature.priorityTone ?? 'neutral'] ?? PRIORITY_TEXT.neutral;
   const safeProgress = Math.max(0, Math.min(feature.progress, 100));
@@ -123,7 +104,7 @@ function FeatureDetailPanel({ feature }: FeatureDetailPanelProps) {
             className="h-5 w-5 text-blue-500"
             aria-hidden="true"
           />
-          <h4 className="text-sm font-semibold text-gray-800">Descripción</h4>
+          <h4 className="text-sm font-semibold text-gray-800">Description</h4>
         </div>
         <p className="text-sm text-gray-700">{feature.description}</p>
       </div>
@@ -131,10 +112,10 @@ function FeatureDetailPanel({ feature }: FeatureDetailPanelProps) {
       {/* Stats + progress */}
       <div className="bg-gray-50 border border-gray-100 rounded-lg p-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-          <Stat label="Desarrollador" value={feature.developer} />
+          <Stat label="Developer" value={feature.developer} />
           <Stat label="Story Points" value={`${feature.storyPoints} SPs`} />
-          <Stat label="Prioridad" value={feature.priority} valueClass={priorityClass} />
-          <Stat label="Progreso" value={`${safeProgress}%`} />
+          <Stat label="Priority" value={feature.priority} valueClass={priorityClass} />
+          <Stat label="Progress" value={`${safeProgress}%`} />
         </div>
 
         <div
@@ -150,21 +131,21 @@ function FeatureDetailPanel({ feature }: FeatureDetailPanelProps) {
           />
         </div>
         <div className="text-xs text-gray-500 mt-2 text-center">
-          {feature.completedTasks} de {feature.totalTasks} tareas completadas
+          {feature.completedTasks} of {feature.totalTasks} tasks completed
         </div>
       </div>
 
       {/* Tasks */}
       <div>
-        <h4 className="text-base font-semibold text-gray-800 mb-3">Tareas Asociadas</h4>
+        <h4 className="text-base font-semibold text-gray-800 mb-3">Linked Tasks</h4>
         {feature.tasks && feature.tasks.length > 0 ? (
           <ul className="space-y-2">
             {feature.tasks.map(t => (
-              <TaskItem key={t.id} task={t} />
+              <TaskItem key={t.id} task={t} onClick={() => onTaskClick?.(t.id)} />
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-gray-400">Sin tareas asociadas</p>
+          <p className="text-sm text-gray-400">No linked tasks</p>
         )}
       </div>
     </div>

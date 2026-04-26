@@ -20,6 +20,9 @@ import type {
   PriorityTone,
 } from '../Components/Sprint';
 import type { StatusTone } from '../Components/Sprint';
+import TaskDetailModal from '../Components/Common/TaskDetailModal';
+import type { TaskDetailData } from '../Components/Common/TaskDetailModal';
+import PageLoading from '../Components/Common/PageLoading';
 import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +60,7 @@ interface TaskDTO {
   nameTask?: string | null;
   /** Long-text description of the task (TaskTT.infoTask, max 2000 chars). */
   infoTask?: string | null;
+  priority?: string | null;
   storyPoints: number | null;
   dateStartTask: string | null;
   dateEndSetTask: string | null;
@@ -97,7 +101,7 @@ const ZERO_KPIS: ComputedKpis = {
   totalFeatures: 0,
   taskDelay: 0,
   delayedTasks: 0,
-  cycleTime: '0.0 días',
+  cycleTime: '0.0 days',
   totalTasks: 0,
 };
 
@@ -145,7 +149,7 @@ function computeSprintKpis(tasks: SprintTaskJoined[]): ComputedKpis {
     totalFeatures:   total,
     taskDelay:       Math.round((overdue / total) * 100),
     delayedTasks:    overdue,
-    cycleTime:       `${avgCycleDays.toFixed(1)} días`,
+    cycleTime:       `${avgCycleDays.toFixed(1)} days`,
     totalTasks:      total,
   };
 }
@@ -169,7 +173,7 @@ interface SprintInfo {
 
 /** Backend priority → display label. */
 function priorityLabel(p: string | null | undefined): string {
-  if (!p) return 'Sin definir';
+  if (!p) return 'Not set';
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
@@ -183,11 +187,24 @@ function priorityToTone(p: string | null | undefined): PriorityTone {
   }
 }
 
+function mapTaskPriority(p: string | null | undefined): 'high' | 'medium' | 'low' | 'none' {
+  switch ((p ?? '').toLowerCase()) {
+    case 'high':
+      return 'high';
+    case 'medium':
+      return 'medium';
+    case 'low':
+      return 'low';
+    default:
+      return 'none';
+  }
+}
+
 /** Derive a status label + tone from task completion progress. */
 function statusFromProgress(progress: number): { label: string; tone: StatusTone } {
-  if (progress >= 100) return { label: 'Completada', tone: 'success' };
-  if (progress > 0)    return { label: 'En Progreso', tone: 'info' };
-  return { label: 'Pendiente', tone: 'neutral' };
+  if (progress >= 100) return { label: 'Completed', tone: 'success' };
+  if (progress > 0)    return { label: 'In Progress', tone: 'info' };
+  return { label: 'Pending', tone: 'neutral' };
 }
 
 /** Display-friendly date: "15 mar 2026" from "2026-03-15". Empty on null. */
@@ -195,7 +212,7 @@ function formatDate(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('es-ES', {
+  return d.toLocaleDateString('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -215,7 +232,7 @@ const MOCK_SPRINT_BASE: Omit<SprintInfo, 'id' | 'name'> = {
     totalFeatures: 2,
     taskDelay: 0,
     delayedTasks: 0,
-    cycleTime: '0.0 días',
+    cycleTime: '0.0 days',
   },
 };
 
@@ -278,7 +295,7 @@ export default function SprintPage() {
     const match = projectId != null
       ? projects.find(p => p.pjId === projectId)
       : undefined;
-    return match?.namePj ?? projects[0]?.namePj ?? 'Proyecto';
+    return match?.namePj ?? projects[0]?.namePj ?? 'Project';
   }, [projectId]);
 
   // Real sprint detail from the backend — name + dates come from
@@ -297,19 +314,26 @@ export default function SprintPage() {
   // userId → display name lookup, for "developer" badge on each feature.
   // Built from /api/users-tt — small payload, fetched once on mount.
   const [usersById, setUsersById] = useState<Map<number, string>>(new Map());
+  const [sprintDataLoading, setSprintDataLoading] = useState(
+    sprintId != null && sprintId >= 0
+  );
+  const [usersLoading, setUsersLoading] = useState(true);
 
   useEffect(() => {
     if (sprintId == null || sprintId < 0) {
       setSprintDto(null);
       setSprintTasks([]);
       setRawFeatures([]);
+      setSprintDataLoading(false);
       return;
     }
+
+    setSprintDataLoading(true);
     let cancelled = false;
 
     // Sprint header fetch (separate so the title + dates show ASAP, even
     // if the heavier KPI fetch is still pending).
-    fetch(`/api/sprints/${sprintId}`)
+    const sprintRequest = fetch(`/api/sprints/${sprintId}`)
       .then(res => (res.ok ? res.json() : null))
       .then((data: SprintDTO | null) => {
         if (cancelled) return;
@@ -319,7 +343,7 @@ export default function SprintPage() {
 
     // Features for this sprint (real data, replaces MOCK_FEATURES).
     // Endpoint lives on FeatureTTController which is the canonical owner.
-    fetch(`/api/features/sprint/${sprintId}`)
+    const featuresRequest = fetch(`/api/features/sprint/${sprintId}`)
       .then(res => (res.ok ? res.json() : []))
       .then((data: FeatureDTO[]) => {
         if (cancelled) return;
@@ -329,7 +353,7 @@ export default function SprintPage() {
 
     // KPI data: link rows for this sprint + the full task list, joined by taskId.
     // Two requests instead of N (one per task) — Map lookup makes the join O(N).
-    Promise.all([
+    const tasksRequest = Promise.all([
       fetch(`/api/sprint-tasks/sprint/${sprintId}`).then(r => (r.ok ? r.json() : [])),
       fetch('/api/tasks').then(r => (r.ok ? r.json() : [])),
     ])
@@ -348,6 +372,10 @@ export default function SprintPage() {
         /* Leave KPIs empty on failure — page falls back to ZERO_KPIS via memo. */
       });
 
+    Promise.allSettled([sprintRequest, featuresRequest, tasksRequest]).finally(() => {
+      if (!cancelled) setSprintDataLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
@@ -357,17 +385,26 @@ export default function SprintPage() {
   // sprint navigations (deps: []) — same map serves every feature row.
   useEffect(() => {
     let cancelled = false;
+    setUsersLoading(true);
     fetch('/api/users-tt')
       .then(r => (r.ok ? r.json() : []))
       .then((data: Array<{ userId: number; nameUser: string }>) => {
         if (cancelled) return;
         setUsersById(new Map(data.map(u => [u.userId, u.nameUser])));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setUsersLoading(false);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const isPageLoading =
+    sprintId != null
+    && sprintId >= 0
+    && (sprintDataLoading || usersLoading);
 
   // KPIs are pure derivation — no extra state needed.
   const computedKpis = useMemo(
@@ -394,7 +431,7 @@ export default function SprintPage() {
       );
       const firstOwner = ownerIds.length > 0
         ? usersById.get(ownerIds[0]) ?? `User #${ownerIds[0]}`
-        : 'Sin asignar';
+        : 'Unassigned';
       const developer = ownerIds.length > 1
         ? `${firstOwner} +${ownerIds.length - 1}`
         : firstOwner;
@@ -409,7 +446,7 @@ export default function SprintPage() {
         statusLabel: status.label,
         statusTone:  status.tone,
         // Backend Feature has no description/long-text field today.
-        description: 'Sin descripción disponible.',
+        description: 'No description available.',
         priority:     priorityLabel(f.priorityFeature),
         priorityTone: priorityToTone(f.priorityFeature),
         progress,
@@ -473,11 +510,14 @@ export default function SprintPage() {
   // Selection is nullable so we can render an empty state when no features.
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
 
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState<TaskDetailData | null>(null);
+
   // Drop the previous sprint's selection when navigating between sprints —
   // otherwise a stale feature ID could briefly look "selected" before the
   // visibleFeatures fallback kicks in.
   useEffect(() => {
     setSelectedFeatureId(null);
+    setSelectedTaskForModal(null);
   }, [sprintId]);
 
   // Keep selection valid as the list changes — auto-pick first visible
@@ -509,8 +549,39 @@ export default function SprintPage() {
       }
     : null;
 
+  const handleTaskClick = (taskId: number) => {
+    const taskDTO = sprintTasks.find(t => t.taskId === taskId);
+    if (!taskDTO) return;
+
+    const devName = taskDTO.userId ? (usersById.get(taskDTO.userId) ?? 'Unassigned') : 'Unassigned';
+
+    setSelectedTaskForModal({
+      id: taskDTO.taskId,
+      name: taskDTO.nameTask ?? `Task #${taskDTO.taskId}`,
+      description: taskDTO.infoTask ?? null,
+      storyPoints: taskDTO.storyPoints ?? null,
+      priority: mapTaskPriority(taskDTO.priority),
+      developerName: devName,
+      state: taskDTO.stateTask || 'Active',
+    });
+  };
+
   return (
     <div className="bg-gray-50 min-h-full px-6 py-8">
+      <TaskDetailModal
+        isOpen={selectedTaskForModal !== null}
+        onClose={() => setSelectedTaskForModal(null)}
+        task={selectedTaskForModal}
+      />
+
+      {isPageLoading ? (
+        <div className="max-w-7xl mx-auto">
+          <PageLoading
+            title="Loading sprint..."
+            subtitle="Fetching sprint data, tasks, features, and assignments for the full view."
+          />
+        </div>
+      ) : (
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <header>
@@ -524,7 +595,7 @@ export default function SprintPage() {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <CheckCircleIcon className="h-4 w-4" aria-hidden="true" />
-              {sprint.totalTasks} tareas totales
+              {sprint.totalTasks} total tasks
             </span>
           </div>
         </header>
@@ -535,40 +606,40 @@ export default function SprintPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           <h2 id="sprint-kpis-heading" className="sr-only">
-            KPIs del Sprint
+            Sprint KPIs
           </h2>
 
           <KpiCard
-            label="Progreso del Sprint"
+            label="Sprint Progress"
             value={`${sprint.kpis.progress}%`}
             icon={ArrowTrendingUpIcon}
             tone="success"
           />
 
           <KpiCard
-            label="Tasa de Arrastre"
+            label="Carryover Rate"
             value={`${sprint.kpis.carryRate}%`}
             icon={ExclamationCircleIcon}
             tone="warning"
           >
             <p className="text-xs text-gray-500">
-              {sprint.kpis.carriedFeatures} de {sprint.kpis.totalFeatures} tareas arrastradas
+              {sprint.kpis.carriedFeatures} of {sprint.kpis.totalFeatures} carried over tasks
             </p>
           </KpiCard>
 
           <KpiCard
-            label="Retraso en Tareas"
+            label="Task Delay"
             value={`${sprint.kpis.taskDelay}%`}
             icon={ExclamationCircleIcon}
             tone="danger"
           >
             <p className="text-xs text-gray-500">
-              {sprint.kpis.delayedTasks} tareas retrasadas
+              {sprint.kpis.delayedTasks} delayed tasks
             </p>
           </KpiCard>
 
           <KpiCard
-            label="Tiempo de Ciclo"
+            label="Cycle Time"
             value={sprint.kpis.cycleTime}
             icon={ClockIcon}
             tone="info"
@@ -588,7 +659,7 @@ export default function SprintPage() {
             className="flex items-center gap-3 text-xl font-bold text-gray-800"
           >
             <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
-            Features del Sprint
+            Sprint Features
           </h2>
 
           <FeatureFilters
@@ -609,8 +680,8 @@ export default function SprintPage() {
               {visibleFeatures.length === 0 ? (
                 <p className="text-sm text-gray-400">
                   {displayFeatures.length === 0
-                    ? 'Este sprint aún no tiene features.'
-                    : 'No hay features que coincidan con los filtros.'}
+                    ? 'This sprint has no features yet.'
+                    : 'No features match the current filters.'}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -634,15 +705,16 @@ export default function SprintPage() {
 
             {/* Right: feature detail (only when something is selected). */}
             {detail ? (
-              <FeatureDetailPanel feature={detail} />
+              <FeatureDetailPanel feature={detail} onTaskClick={handleTaskClick} />
             ) : (
               <p className="text-sm text-gray-400 self-center text-center">
-                Selecciona una feature para ver su detalle.
+                Select a feature to view details.
               </p>
             )}
           </div>
         </section>
       </div>
+      )}
     </div>
   );
 }

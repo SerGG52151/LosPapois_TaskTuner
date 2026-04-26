@@ -119,7 +119,7 @@ export default function ProfilePage() {
     return (
       <div className="bg-gray-50 min-h-full px-6 py-12">
         <p className="text-center text-gray-500">
-          Inicia sesión para ver tu perfil.
+          Sign in to view your profile.
         </p>
       </div>
     );
@@ -158,7 +158,7 @@ export default function ProfilePage() {
     const wantsPasswordChange =
       passwords.newPass.length > 0 || passwords.confirm.length > 0;
     if (wantsPasswordChange && passwords.newPass !== passwords.confirm) {
-      setError('Las contraseñas no coinciden.');
+      setError('Passwords do not match.');
       return;
     }
 
@@ -196,7 +196,7 @@ export default function ProfilePage() {
       setIsEditing(false);
     } catch (err) {
       console.error('[ProfilePage] save failed', err);
-      setError('No se pudo guardar el perfil. Intenta de nuevo.');
+      setError('Could not save profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -362,7 +362,7 @@ export default function ProfilePage() {
                 Change Password
               </h3>
               <p className="text-xs text-gray-500 mb-4">
-                Déjalo en blanco para mantener tu contraseña actual.
+                Leave both fields empty to keep your current password.
               </p>
               <div className="space-y-4">
                 <div>
