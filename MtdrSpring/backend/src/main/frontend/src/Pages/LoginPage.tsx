@@ -14,7 +14,7 @@ export default function LoginPage(): JSX.Element {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-md border border-gray-200">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-xl shadow-brand/20 border border-gray-200">
         <div className="p-6">
           <div className="text-center mb-4">
             <h2 className="text-2xl font-semibold">Sign In</h2>
@@ -59,7 +59,7 @@ export default function LoginPage(): JSX.Element {
                 type="submit"
                 className="w-full bg-brand hover:bg-brand-dark text-white py-2 rounded-md font-medium"
               >
-                {loading ? 'Iniciando sesión...' : 'Log in'}
+                {loading ? 'Signing in...' : 'Log in'}
               </button>
             </div>
           </form>
