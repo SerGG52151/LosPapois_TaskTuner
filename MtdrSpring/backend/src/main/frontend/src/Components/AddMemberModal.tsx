@@ -38,14 +38,14 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-8">
+      <div className="bg-white rounded-2xl shadow-2xl shadow-brand-dark/30 w-full max-w-md mx-4 p-8">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">
-          {isEditing ? 'Editar Miembro' : 'Agregar Nuevo Miembro'}
+          {isEditing ? 'Edit Member' : 'Add New Member'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">Nombre Completo</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-2">Full Name</label>
             <input
               type="text"
               required
@@ -55,7 +55,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">Correo Electrónico</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-2">Email</label>
             <input
               type="email"
               required
@@ -65,7 +65,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">Rol</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-2">Role</label>
             <input
               type="text"
               required
@@ -75,7 +75,7 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-600 mb-2">ID de Telegram</label>
+            <label className="block text-sm font-semibold text-gray-600 mb-2">Telegram ID</label>
             <input
               type="text"
               required
@@ -91,13 +91,13 @@ export default function AddMemberModal({ isOpen, onClose, onSave, initialData }:
               onClick={onClose}
               className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-full font-medium hover:bg-gray-50 transition-colors"
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
               className="flex-1 bg-brand hover:bg-brand-dark text-white py-3 rounded-full font-medium transition-colors"
             >
-              {isEditing ? 'Guardar' : 'Agregar'}
+              {isEditing ? 'Save' : 'Add'}
             </button>
           </div>
         </form>

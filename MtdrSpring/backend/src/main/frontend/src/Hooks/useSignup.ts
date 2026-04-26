@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_CONFIG } from '../config';
-import { saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface SignupCredentials {
   username: string;
@@ -47,19 +46,14 @@ export default function useSignup(): UseSignupReturn {
 
       if (response.ok) {
         const user = await response.json();
-        saveToStorage(STORAGE_KEYS.USER, user);
-        
-        // Optional: store auth token if provided
-        if (user.token) {
-          saveToStorage(STORAGE_KEYS.AUTH_TOKEN, user.token);
-        }
-        
+        console.log('Signup successful', user);
+        localStorage.setItem('user', JSON.stringify(user));
         // Don't update state after navigation
         navigate('/login');
       } else {
         const errorData = await response.json();
         if (isMountedRef.current) {
-          setError(errorData.error || 'Error during registration');
+          setError(errorData.error || 'Registration failed');
         }
       }
     } catch (err) {
