@@ -18,6 +18,8 @@ import type {
   MemberTaskPriority,
 } from '../Components/Team';
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
+import TaskDetailModal from '../Components/Common/TaskDetailModal';
+import type { TaskDetailData } from '../Components/Common/TaskDetailModal';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data — visual-only until the team / KPI endpoints are wired.
@@ -283,6 +285,8 @@ export default function TeamPage() {
     () => members[0]?.id ?? null
   );
 
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState<TaskDetailData | null>(null);
+
   // Re-seed + refetch whenever the project changes.
   useEffect(() => {
     if (projectId == null) return;
@@ -439,8 +443,31 @@ export default function TeamPage() {
       });
   }, [selectedMember, projectId, projectTasks, allFeatures]);
 
+  const handleTaskClick = (taskId: number) => {
+    const taskDTO = projectTasks.find(t => t.taskId === taskId);
+    if (!taskDTO) return;
+
+    // Get developer name if needed, though they clicked from selectedMember list so it's selectedMember.name
+    const dev = members.find(m => m.id === taskDTO.userId);
+
+    setSelectedTaskForModal({
+      id: taskDTO.taskId,
+      name: taskDTO.nameTask ?? `Task #${taskDTO.taskId}`,
+      description: taskDTO.infoTask ?? null,
+      storyPoints: taskDTO.storyPoints,
+      priority: mapPriority(taskDTO.priority),
+      developerName: dev?.name ?? 'Sin asignar',
+      state: taskDTO.dateEndRealTask ? 'Cerrada' : 'Activa',
+    });
+  };
+
   return (
     <div className="bg-gray-50 min-h-full px-6 py-8">
+      <TaskDetailModal
+        isOpen={selectedTaskForModal !== null}
+        onClose={() => setSelectedTaskForModal(null)}
+        task={selectedTaskForModal}
+      />
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Page header */}
         <header>
@@ -569,6 +596,7 @@ export default function TeamPage() {
                 tasks={selectedTasks}
                 onEdit={() => console.log('[TeamPage] edit', selectedMember.id)}
                 onDelete={() => console.log('[TeamPage] delete', selectedMember.id)}
+                onTaskClick={handleTaskClick}
               />
             ) : (
               <p className="text-sm text-gray-400 self-center text-center">

@@ -50,6 +50,7 @@ export interface MemberDetailPanelProps {
   tasks?: MemberTaskLite[];
   onEdit?: () => void;
   onDelete?: () => void;
+  onTaskClick?: (taskId: number) => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,82 +95,61 @@ function MiniKpi({ label, value }: { label: string; value: string | number }) {
  * element — click anywhere on the summary line to expand and read the
  * full body. Tasks without description render as a plain row.
  */
-function TaskItem({ task }: { task: MemberTaskLite }) {
+function TaskItem({ task, onClick }: { task: MemberTaskLite; onClick?: () => void }) {
   const hasDescription =
     !!task.description && task.description.trim().length > 0;
 
-  const row = (
-    <div className="flex items-center gap-3 px-3 py-2.5">
-      {/* Completion indicator — filled green check when done, empty circle otherwise. */}
-      {task.done ? (
-        <CheckCircleIcon className="h-5 w-5 text-green-500 shrink-0" aria-hidden="true" />
-      ) : (
-        <span
-          className="h-5 w-5 rounded-full border-2 border-gray-300 shrink-0"
-          aria-hidden="true"
-        />
-      )}
-
-      <div className="min-w-0 flex-1">
-        <div
-          className={`text-sm font-medium truncate ${
-            task.done ? 'text-gray-400 line-through' : 'text-gray-800'
-          }`}
-        >
-          {task.name}
-        </div>
-        {(task.featureName || task.storyPoints != null) && (
-          <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
-            {task.featureName && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-600 truncate max-w-[180px]">
-                {task.featureName}
-              </span>
-            )}
-            {task.storyPoints != null && task.storyPoints > 0 && (
-              <span>{task.storyPoints} SP</span>
-            )}
-          </div>
-        )}
-      </div>
-
-      <span
-        className={`inline-flex items-center px-2.5 py-0.5 rounded-full
-                    text-xs font-medium shrink-0
-                    ${PRIORITY_BADGE[task.priority]}`}
-      >
-        {PRIORITY_LABEL[task.priority]}
-      </span>
-
-      {hasDescription && (
-        <ChevronRightIcon
-          className="size-4 text-gray-400 shrink-0 transition-transform duration-150
-                     group-open:rotate-90"
-          aria-hidden="true"
-        />
-      )}
-    </div>
-  );
-
-  if (!hasDescription) {
-    return (
-      <li className="bg-white border border-gray-200 rounded-lg">{row}</li>
-    );
-  }
-
   return (
-    <li className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <details className="group">
-        <summary
-          className="cursor-pointer list-none select-none hover:bg-gray-50 transition-colors"
-        >
-          {row}
-        </summary>
-        <div className="px-3 pb-3 pt-1 border-t border-gray-100">
-          <p className="text-sm text-gray-600 whitespace-pre-wrap">
-            {task.description}
-          </p>
+    <li
+      className="bg-white border border-gray-200 rounded-lg overflow-hidden cursor-pointer hover:bg-gray-50 transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-center gap-3 px-3 py-2.5">
+        {/* Completion indicator — filled green check when done, empty circle otherwise. */}
+        {task.done ? (
+          <CheckCircleIcon className="h-5 w-5 text-green-500 shrink-0" aria-hidden="true" />
+        ) : (
+          <span
+            className="h-5 w-5 rounded-full border-2 border-gray-300 shrink-0"
+            aria-hidden="true"
+          />
+        )}
+
+        <div className="min-w-0 flex-1">
+          <div
+            className={`text-sm font-medium truncate ${
+              task.done ? 'text-gray-400 line-through' : 'text-gray-800'
+            }`}
+          >
+            {task.name}
+          </div>
+          {(task.featureName || task.storyPoints != null) && (
+            <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+              {task.featureName && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-600 truncate max-w-[180px]">
+                  {task.featureName}
+                </span>
+              )}
+              {task.storyPoints != null && task.storyPoints > 0 && (
+                <span>{task.storyPoints} SP</span>
+              )}
+            </div>
+          )}
         </div>
-      </details>
+
+        <span
+          className={`inline-flex items-center px-2.5 py-0.5 rounded-full
+                      text-xs font-medium shrink-0
+                      ${PRIORITY_BADGE[task.priority]}`}
+        >
+          {PRIORITY_LABEL[task.priority]}
+        </span>
+
+        <ChevronRightIcon
+          className="size-4 text-gray-400 shrink-0"
+          aria-hidden="true"
+        />
+      </div>
     </li>
   );
 }
@@ -189,6 +169,7 @@ function MemberDetailPanel({
   tasks,
   onEdit,
   onDelete,
+  onTaskClick
 }: MemberDetailPanelProps) {
   return (
     <div>
@@ -249,7 +230,7 @@ function MemberDetailPanel({
           ) : (
             <ul className="space-y-2">
               {tasks.map(t => (
-                <TaskItem key={t.id} task={t} />
+                <TaskItem key={t.id} task={t} onClick={() => onTaskClick?.(t.id)} />
               ))}
             </ul>
           )}

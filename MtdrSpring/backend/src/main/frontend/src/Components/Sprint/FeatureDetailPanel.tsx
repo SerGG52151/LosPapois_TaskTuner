@@ -42,39 +42,19 @@ const PRIORITY_TEXT: Record<PriorityTone, string> = {
  *     can click the row to expand the body. Zero JS state, fully
  *     keyboard-accessible (Tab + Enter), respects browser print.
  */
-function TaskItem({ task }: { task: FeatureTaskLite }) {
-  const hasDescription = !!task.description && task.description.trim().length > 0;
-
-  if (!hasDescription) {
-    return (
-      <li className="px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700">
-        {task.name}
-      </li>
-    );
-  }
-
+function TaskItem({ task, onClick }: { task: FeatureTaskLite; onClick?: () => void }) {
   return (
-    <li className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <details className="group">
-        <summary
-          className="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer
-                     list-none select-none hover:bg-gray-50 transition-colors"
-        >
-          <span className="text-sm font-medium text-gray-800 truncate">
-            {task.name}
-          </span>
-          <ChevronRightIcon
-            className="size-4 text-gray-400 shrink-0 transition-transform duration-150
-                       group-open:rotate-90"
-            aria-hidden="true"
-          />
-        </summary>
-        <div className="px-3 pb-3 pt-1 border-t border-gray-100">
-          <p className="text-sm text-gray-600 whitespace-pre-wrap">
-            {task.description}
-          </p>
-        </div>
-      </details>
+    <li
+      className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+      onClick={onClick}
+    >
+      <span className="text-sm font-medium text-gray-800 truncate">
+        {task.name}
+      </span>
+      <ChevronRightIcon
+        className="size-4 text-gray-400 shrink-0"
+        aria-hidden="true"
+      />
     </li>
   );
 }
@@ -99,6 +79,7 @@ function Stat({
 
 export interface FeatureDetailPanelProps {
   feature: FeatureDetailData;
+  onTaskClick?: (taskId: number) => void;
 }
 
 /**
@@ -107,7 +88,7 @@ export interface FeatureDetailPanelProps {
  *   - Stats block (developer / SPs / priority / progress) + progress bar
  *   - "Tareas Asociadas" list (or empty state)
  */
-function FeatureDetailPanel({ feature }: FeatureDetailPanelProps) {
+function FeatureDetailPanel({ feature, onTaskClick }: FeatureDetailPanelProps) {
   const priorityClass =
     PRIORITY_TEXT[feature.priorityTone ?? 'neutral'] ?? PRIORITY_TEXT.neutral;
   const safeProgress = Math.max(0, Math.min(feature.progress, 100));
@@ -160,7 +141,7 @@ function FeatureDetailPanel({ feature }: FeatureDetailPanelProps) {
         {feature.tasks && feature.tasks.length > 0 ? (
           <ul className="space-y-2">
             {feature.tasks.map(t => (
-              <TaskItem key={t.id} task={t} />
+              <TaskItem key={t.id} task={t} onClick={() => onTaskClick?.(t.id)} />
             ))}
           </ul>
         ) : (

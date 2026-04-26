@@ -20,6 +20,8 @@ import type {
   PriorityTone,
 } from '../Components/Sprint';
 import type { StatusTone } from '../Components/Sprint';
+import TaskDetailModal from '../Components/Common/TaskDetailModal';
+import type { TaskDetailData } from '../Components/Common/TaskDetailModal';
 import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ interface TaskDTO {
   nameTask?: string | null;
   /** Long-text description of the task (TaskTT.infoTask, max 2000 chars). */
   infoTask?: string | null;
+  priority?: string | null;
   storyPoints: number | null;
   dateStartTask: string | null;
   dateEndSetTask: string | null;
@@ -180,6 +183,19 @@ function priorityToTone(p: string | null | undefined): PriorityTone {
     case 'medium': return 'warning';
     case 'low':    return 'success';
     default:       return 'neutral';
+  }
+}
+
+function mapTaskPriority(p: string | null | undefined): 'high' | 'medium' | 'low' | 'none' {
+  switch ((p ?? '').toLowerCase()) {
+    case 'high':
+      return 'high';
+    case 'medium':
+      return 'medium';
+    case 'low':
+      return 'low';
+    default:
+      return 'none';
   }
 }
 
@@ -473,11 +489,14 @@ export default function SprintPage() {
   // Selection is nullable so we can render an empty state when no features.
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
 
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState<TaskDetailData | null>(null);
+
   // Drop the previous sprint's selection when navigating between sprints —
   // otherwise a stale feature ID could briefly look "selected" before the
   // visibleFeatures fallback kicks in.
   useEffect(() => {
     setSelectedFeatureId(null);
+    setSelectedTaskForModal(null);
   }, [sprintId]);
 
   // Keep selection valid as the list changes — auto-pick first visible
@@ -509,8 +528,30 @@ export default function SprintPage() {
       }
     : null;
 
+  const handleTaskClick = (taskId: number) => {
+    const taskDTO = sprintTasks.find(t => t.taskId === taskId);
+    if (!taskDTO) return;
+
+    const devName = taskDTO.userId ? (usersById.get(taskDTO.userId) ?? 'Sin asignar') : 'Sin asignar';
+
+    setSelectedTaskForModal({
+      id: taskDTO.taskId,
+      name: taskDTO.nameTask ?? `Task #${taskDTO.taskId}`,
+      description: taskDTO.infoTask ?? null,
+      storyPoints: taskDTO.storyPoints ?? null,
+      priority: mapTaskPriority(taskDTO.priority),
+      developerName: devName,
+      state: taskDTO.stateTask || 'Activa',
+    });
+  };
+
   return (
     <div className="bg-gray-50 min-h-full px-6 py-8">
+      <TaskDetailModal
+        isOpen={selectedTaskForModal !== null}
+        onClose={() => setSelectedTaskForModal(null)}
+        task={selectedTaskForModal}
+      />
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <header>
@@ -634,7 +675,7 @@ export default function SprintPage() {
 
             {/* Right: feature detail (only when something is selected). */}
             {detail ? (
-              <FeatureDetailPanel feature={detail} />
+              <FeatureDetailPanel feature={detail} onTaskClick={handleTaskClick} />
             ) : (
               <p className="text-sm text-gray-400 self-center text-center">
                 Selecciona una feature para ver su detalle.
