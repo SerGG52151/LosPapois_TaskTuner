@@ -23,6 +23,7 @@ public enum BotMessages {
 	TYPE_NEW_ITEM_DATE_START("Write the start date (DD/MM/YYYY):"),
 	TYPE_NEW_ITEM_DATE_END("Write the end date (DD/MM/YYYY):"),
 	INVALID_DATE("Invalid date. Use the DD/MM/YYYY format:"),
+	INVALID_DATE_RANGE("Date out of range. Use a date between 2022 and 2040 (DD/MM/YYYY):"),
 	SELECT_PRIORITY("Select the priority level:"),
 	SELECT_SPRINT("Select the sprint this task belongs to:"),
 	NO_SPRINTS_CREATED("No sprints were available. Test sprints were created — try selecting them."),
@@ -34,7 +35,11 @@ public enum BotMessages {
 	SELECT_FEATURE_PRIORITY("Select the feature priority:"),
 	SELECT_FEATURE_SPRINT("Select the sprint this feature belongs to:"),
 	FEATURE_ADDED("Feature created successfully!"),
-	BYE("Bye! Select /start to resume!");
+	BYE("Bye! Select /start to resume!"),
+	ASK_AI_PROMPT("🤖 Ask me anything about your tasks, sprint, or project progress:"),
+	ASK_AI_DISABLED("The AI assistant is currently unavailable."),
+	ASK_AI_THINKING("🤔 Thinking..."),
+	ASK_AI_EMPTY_QUESTION("Please type a project-related question.");
 
 	private String message;
 

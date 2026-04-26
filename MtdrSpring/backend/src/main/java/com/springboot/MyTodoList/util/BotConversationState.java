@@ -25,4 +25,6 @@ public enum BotConversationState {
     WAITING_REGISTER_EMAIL,
     WAITING_REGISTER_PASSWORD,
     WAITING_REGISTER_PASSWORD_CONFIRM,
+    // AI assistant flow
+    WAITING_AI_QUESTION,
 }
