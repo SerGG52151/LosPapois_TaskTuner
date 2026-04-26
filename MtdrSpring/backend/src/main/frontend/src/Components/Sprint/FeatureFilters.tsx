@@ -68,25 +68,25 @@ function FeatureFilters({
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <Select
-        placeholder="Todos los desarrolladores"
+        placeholder="All developers"
         value={values?.developer}
         options={developers}
         onChange={v => onChange?.('developer', v)}
       />
       <Select
-        placeholder="Todos los estados"
+        placeholder="All statuses"
         value={values?.status}
         options={statuses}
         onChange={v => onChange?.('status', v)}
       />
       <Select
-        placeholder="Todas las prioridades"
+        placeholder="All priorities"
         value={values?.priority}
         options={priorities}
         onChange={v => onChange?.('priority', v)}
       />
       <Select
-        placeholder="Todos los SPs"
+        placeholder="All SPs"
         value={values?.sp}
         options={storyPoints}
         onChange={v => onChange?.('sp', v)}
