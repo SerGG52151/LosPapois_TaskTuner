@@ -20,6 +20,7 @@ import type {
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 import TaskDetailModal from '../Components/Common/TaskDetailModal';
 import type { TaskDetailData } from '../Components/Common/TaskDetailModal';
+import PageLoading from '../Components/Common/PageLoading';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data — visual-only until the team / KPI endpoints are wired.
@@ -286,10 +287,16 @@ export default function TeamPage() {
   );
 
   const [selectedTaskForModal, setSelectedTaskForModal] = useState<TaskDetailData | null>(null);
+  const [membersLoading, setMembersLoading] = useState(
+    projectId != null && projectId >= 0
+  );
+  const [tasksLoading, setTasksLoading] = useState(allTasks.length === 0);
+  const [featuresLoading, setFeaturesLoading] = useState(true);
 
   // Re-seed + refetch whenever the project changes.
   useEffect(() => {
     if (projectId == null) return;
+    setMembersLoading(false);
 
     if (projectId < 0) {
       // Demo project — keep mock data, no backend call.
@@ -301,6 +308,8 @@ export default function TeamPage() {
       );
       return;
     }
+
+    setMembersLoading(true);
 
     // Reset to whatever's cached for this project so the previous project's
     // members don't briefly leak across navigations.
@@ -333,6 +342,7 @@ export default function TeamPage() {
           : mapped[0]?.id ?? null
       );
       saveToStorage(teamCacheKey(projectId), mapped);
+      setMembersLoading(false);
     });
 
     return () => {
@@ -346,6 +356,7 @@ export default function TeamPage() {
   // projects in the sidebar.
   useEffect(() => {
     let cancelled = false;
+    setTasksLoading(true);
     fetch('/api/tasks')
       .then(r => (r.ok ? r.json() : null))
       .then((data: TaskDTO[] | null) => {
@@ -355,6 +366,9 @@ export default function TeamPage() {
       })
       .catch(() => {
         /* Keep cached tasks on failure. */
+      })
+      .finally(() => {
+        if (!cancelled) setTasksLoading(false);
       });
     return () => {
       cancelled = true;
@@ -365,17 +379,26 @@ export default function TeamPage() {
   // Small payload, doesn't change often — no per-project caching needed.
   useEffect(() => {
     let cancelled = false;
+    setFeaturesLoading(true);
     fetch('/api/features')
       .then(r => (r.ok ? r.json() : []))
       .then((data: FeatureDTO[]) => {
         if (cancelled) return;
         setAllFeatures(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setFeaturesLoading(false);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const isPageLoading =
+    projectId != null
+    && projectId >= 0
+    && (membersLoading || tasksLoading || featuresLoading);
 
   // Tasks scoped to the current project — feeds every per-member KPI calc.
   const projectTasks = useMemo(
@@ -468,6 +491,15 @@ export default function TeamPage() {
         onClose={() => setSelectedTaskForModal(null)}
         task={selectedTaskForModal}
       />
+
+      {isPageLoading ? (
+        <div className="max-w-7xl mx-auto">
+          <PageLoading
+            title="Cargando equipo del proyecto..."
+            subtitle="Estamos obteniendo miembros, tareas y features para mostrar la vista completa."
+          />
+        </div>
+      ) : (
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Page header */}
         <header>
@@ -606,6 +638,7 @@ export default function TeamPage() {
           </div>
         </section>
       </div>
+      )}
     </div>
   );
 }

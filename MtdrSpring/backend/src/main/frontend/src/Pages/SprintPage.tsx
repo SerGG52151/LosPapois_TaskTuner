@@ -22,6 +22,7 @@ import type {
 import type { StatusTone } from '../Components/Sprint';
 import TaskDetailModal from '../Components/Common/TaskDetailModal';
 import type { TaskDetailData } from '../Components/Common/TaskDetailModal';
+import PageLoading from '../Components/Common/PageLoading';
 import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -313,19 +314,26 @@ export default function SprintPage() {
   // userId → display name lookup, for "developer" badge on each feature.
   // Built from /api/users-tt — small payload, fetched once on mount.
   const [usersById, setUsersById] = useState<Map<number, string>>(new Map());
+  const [sprintDataLoading, setSprintDataLoading] = useState(
+    sprintId != null && sprintId >= 0
+  );
+  const [usersLoading, setUsersLoading] = useState(true);
 
   useEffect(() => {
     if (sprintId == null || sprintId < 0) {
       setSprintDto(null);
       setSprintTasks([]);
       setRawFeatures([]);
+      setSprintDataLoading(false);
       return;
     }
+
+    setSprintDataLoading(true);
     let cancelled = false;
 
     // Sprint header fetch (separate so the title + dates show ASAP, even
     // if the heavier KPI fetch is still pending).
-    fetch(`/api/sprints/${sprintId}`)
+    const sprintRequest = fetch(`/api/sprints/${sprintId}`)
       .then(res => (res.ok ? res.json() : null))
       .then((data: SprintDTO | null) => {
         if (cancelled) return;
@@ -335,7 +343,7 @@ export default function SprintPage() {
 
     // Features for this sprint (real data, replaces MOCK_FEATURES).
     // Endpoint lives on FeatureTTController which is the canonical owner.
-    fetch(`/api/features/sprint/${sprintId}`)
+    const featuresRequest = fetch(`/api/features/sprint/${sprintId}`)
       .then(res => (res.ok ? res.json() : []))
       .then((data: FeatureDTO[]) => {
         if (cancelled) return;
@@ -345,7 +353,7 @@ export default function SprintPage() {
 
     // KPI data: link rows for this sprint + the full task list, joined by taskId.
     // Two requests instead of N (one per task) — Map lookup makes the join O(N).
-    Promise.all([
+    const tasksRequest = Promise.all([
       fetch(`/api/sprint-tasks/sprint/${sprintId}`).then(r => (r.ok ? r.json() : [])),
       fetch('/api/tasks').then(r => (r.ok ? r.json() : [])),
     ])
@@ -364,6 +372,10 @@ export default function SprintPage() {
         /* Leave KPIs empty on failure — page falls back to ZERO_KPIS via memo. */
       });
 
+    Promise.allSettled([sprintRequest, featuresRequest, tasksRequest]).finally(() => {
+      if (!cancelled) setSprintDataLoading(false);
+    });
+
     return () => {
       cancelled = true;
     };
@@ -373,17 +385,26 @@ export default function SprintPage() {
   // sprint navigations (deps: []) — same map serves every feature row.
   useEffect(() => {
     let cancelled = false;
+    setUsersLoading(true);
     fetch('/api/users-tt')
       .then(r => (r.ok ? r.json() : []))
       .then((data: Array<{ userId: number; nameUser: string }>) => {
         if (cancelled) return;
         setUsersById(new Map(data.map(u => [u.userId, u.nameUser])));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setUsersLoading(false);
+      });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const isPageLoading =
+    sprintId != null
+    && sprintId >= 0
+    && (sprintDataLoading || usersLoading);
 
   // KPIs are pure derivation — no extra state needed.
   const computedKpis = useMemo(
@@ -552,6 +573,15 @@ export default function SprintPage() {
         onClose={() => setSelectedTaskForModal(null)}
         task={selectedTaskForModal}
       />
+
+      {isPageLoading ? (
+        <div className="max-w-7xl mx-auto">
+          <PageLoading
+            title="Cargando sprint..."
+            subtitle="Estamos obteniendo sprint, tareas, features y asignaciones para mostrar la vista completa."
+          />
+        </div>
+      ) : (
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <header>
@@ -684,6 +714,7 @@ export default function SprintPage() {
           </div>
         </section>
       </div>
+      )}
     </div>
   );
 }
