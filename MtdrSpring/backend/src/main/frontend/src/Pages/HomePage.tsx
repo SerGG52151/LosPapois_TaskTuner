@@ -40,7 +40,7 @@ function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('es-ES', {
+  return d.toLocaleDateString('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -135,16 +135,16 @@ export default function HomePage() {
       <div className="max-w-5xl mx-auto">
         <header className="text-center mb-10">
           <h1 className="text-4xl font-bold text-gray-900">
-            Selecciona un proyecto
+            Select a project
           </h1>
           <p className="text-gray-500 mt-2">
-            Elige un proyecto para ver sus sprints y gestionar tu equipo
+            Choose a project to view its sprints and manage your team
           </p>
         </header>
 
         {projects.length === 0 ? (
           <p className="text-center text-gray-400 mt-12">
-            Aún no hay proyectos abiertos. Crea uno desde el sidebar.
+            No open projects yet. Create one from the sidebar.
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -206,7 +206,7 @@ const ProjectCard = React.memo(function ProjectCard({
           <dl className="mt-3 space-y-1.5 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-4 w-4 text-gray-400" aria-hidden="true" />
-              <span>Finaliza: {formatDate(project.dateEndSetPj)}</span>
+              <span>Ends: {formatDate(project.dateEndSetPj)}</span>
             </div>
             <div className="flex items-center gap-2">
               <UserGroupIcon
@@ -214,7 +214,7 @@ const ProjectCard = React.memo(function ProjectCard({
                 aria-hidden="true"
               />
               <span>
-                {memberCount} {memberCount === 1 ? 'miembro' : 'miembros'} del equipo
+                {memberCount} {memberCount === 1 ? 'team member' : 'team members'}
               </span>
             </div>
             <div className="flex items-center gap-2">

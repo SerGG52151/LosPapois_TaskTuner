@@ -11,10 +11,10 @@ const PRIORITY_BADGE: Record<TaskDetailPriority, string> = {
 };
 
 const PRIORITY_LABEL: Record<TaskDetailPriority, string> = {
-  high: 'Alta',
-  medium: 'Media',
-  low: 'Baja',
-  none: 'Sin definir',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  none: 'Not set',
 };
 
 export interface TaskDetailData {
@@ -74,12 +74,12 @@ export default function TaskDetailModal({
             id="task-detail-title"
             className="text-xl font-bold text-gray-900 truncate pr-4"
           >
-            {task.name || 'Tarea sin nombre'}
+            {task.name || 'Untitled task'}
           </h2>
           <button
             onClick={onClose}
             className="p-2 -mr-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Cerrar modal"
+            aria-label="Close modal"
           >
             <XMarkIcon className="w-6 h-6" />
           </button>
@@ -96,7 +96,7 @@ export default function TaskDetailModal({
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Prioridad</div>
+              <div className="text-xs text-gray-500 mb-1">Priority</div>
               <span
                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${PRIORITY_BADGE[task.priority]}`}
               >
@@ -104,13 +104,13 @@ export default function TaskDetailModal({
               </span>
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Desarrollador</div>
+              <div className="text-xs text-gray-500 mb-1">Developer</div>
               <div className="text-sm font-semibold text-gray-800 truncate">
-                {task.developerName || 'Sin asignar'}
+                {task.developerName || 'Unassigned'}
               </div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Estado</div>
+              <div className="text-xs text-gray-500 mb-1">Status</div>
               <div className="text-sm font-semibold text-gray-800">
                 {task.state || 'N/A'}
               </div>
@@ -119,7 +119,7 @@ export default function TaskDetailModal({
 
           {/* Description Block */}
           <div>
-            <div className="text-sm font-bold text-gray-800 mb-2">Descripción</div>
+            <div className="text-sm font-bold text-gray-800 mb-2">Description</div>
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
               {task.description ? (
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
@@ -127,7 +127,7 @@ export default function TaskDetailModal({
                 </p>
               ) : (
                 <p className="text-sm text-gray-400 italic">
-                  Sin descripción disponible.
+                  No description available.
                 </p>
               )}
             </div>
@@ -140,7 +140,7 @@ export default function TaskDetailModal({
             onClick={onClose}
             className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors shadow-sm"
           >
-            Cerrar
+            Close
           </button>
         </div>
       </div>

@@ -64,11 +64,11 @@ export default function AddSprintModal({
     e.preventDefault();
 
     // Light validation — just enough to avoid garbage payloads.
-    if (!form.name.trim()) return setError('El nombre del sprint es requerido.');
-    if (!form.startDate) return setError('La fecha de inicio es requerida.');
-    if (!form.endDate) return setError('La fecha de fin es requerida.');
+    if (!form.name.trim()) return setError('Sprint name is required.');
+    if (!form.startDate) return setError('Start date is required.');
+    if (!form.endDate) return setError('End date is required.');
     if (form.endDate < form.startDate)
-      return setError('La fecha de fin no puede ser anterior a la de inicio.');
+      return setError('End date cannot be earlier than start date.');
 
     setError(null);
     onCreate?.({ ...form, name: form.name.trim() });
@@ -93,7 +93,7 @@ export default function AddSprintModal({
           id="add-sprint-title"
           className="text-xl font-bold text-gray-900 mb-5"
         >
-          Añadir Nuevo Sprint
+          Add New Sprint
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,7 +102,7 @@ export default function AddSprintModal({
               htmlFor="sprint-name"
               className="block text-sm font-semibold text-gray-800 mb-2"
             >
-              Nombre del Sprint
+              Sprint Name
             </label>
             <input
               ref={nameInputRef}
@@ -110,7 +110,7 @@ export default function AddSprintModal({
               type="text"
               value={form.name}
               onChange={e => handleChange('name', e.target.value)}
-              placeholder="Ej: Sprint MVP Launch"
+              placeholder="e.g. Sprint MVP Launch"
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
                          placeholder:text-gray-400
                          focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
@@ -123,7 +123,7 @@ export default function AddSprintModal({
               htmlFor="sprint-start"
               className="block text-sm font-semibold text-gray-800 mb-2"
             >
-              Fecha de Inicio
+              Start Date
             </label>
             <input
               id="sprint-start"
@@ -142,7 +142,7 @@ export default function AddSprintModal({
               htmlFor="sprint-end"
               className="block text-sm font-semibold text-gray-800 mb-2"
             >
-              Fecha de Fin
+              End Date
             </label>
             <input
               id="sprint-end"
@@ -172,14 +172,14 @@ export default function AddSprintModal({
               className="flex-1 border border-gray-300 text-gray-800 py-3 rounded-xl
                          font-semibold hover:bg-gray-50 transition-colors"
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
               className="flex-1 bg-brand hover:bg-brand-dark text-white py-3 rounded-xl
                          font-semibold shadow-sm transition-colors"
             >
-              Crear Sprint
+              Create Sprint
             </button>
           </div>
         </form>

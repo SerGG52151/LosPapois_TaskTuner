@@ -9,8 +9,8 @@ export interface PageLoadingProps {
  * Full-page loading block used while route data is being fetched.
  */
 export default function PageLoading({
-  title = 'Cargando datos...',
-  subtitle = 'Estamos preparando la informacion de esta pagina.',
+  title = 'Loading data...',
+  subtitle = 'Preparing this page for you.',
 }: PageLoadingProps) {
   return (
     <div className="w-full rounded-2xl border border-gray-200 bg-white p-10 shadow-sm shadow-gray-200/60">
@@ -19,7 +19,7 @@ export default function PageLoading({
           className="relative mb-5 h-14 w-14"
           role="status"
           aria-live="polite"
-          aria-label="Cargando"
+          aria-label="Loading"
         >
           <span className="absolute inset-0 rounded-full border-4 border-gray-200" />
           <span className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-brand" />

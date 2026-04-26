@@ -101,7 +101,7 @@ const ZERO_KPIS: ComputedKpis = {
   totalFeatures: 0,
   taskDelay: 0,
   delayedTasks: 0,
-  cycleTime: '0.0 días',
+  cycleTime: '0.0 days',
   totalTasks: 0,
 };
 
@@ -149,7 +149,7 @@ function computeSprintKpis(tasks: SprintTaskJoined[]): ComputedKpis {
     totalFeatures:   total,
     taskDelay:       Math.round((overdue / total) * 100),
     delayedTasks:    overdue,
-    cycleTime:       `${avgCycleDays.toFixed(1)} días`,
+    cycleTime:       `${avgCycleDays.toFixed(1)} days`,
     totalTasks:      total,
   };
 }
@@ -173,7 +173,7 @@ interface SprintInfo {
 
 /** Backend priority → display label. */
 function priorityLabel(p: string | null | undefined): string {
-  if (!p) return 'Sin definir';
+  if (!p) return 'Not set';
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
@@ -202,9 +202,9 @@ function mapTaskPriority(p: string | null | undefined): 'high' | 'medium' | 'low
 
 /** Derive a status label + tone from task completion progress. */
 function statusFromProgress(progress: number): { label: string; tone: StatusTone } {
-  if (progress >= 100) return { label: 'Completada', tone: 'success' };
-  if (progress > 0)    return { label: 'En Progreso', tone: 'info' };
-  return { label: 'Pendiente', tone: 'neutral' };
+  if (progress >= 100) return { label: 'Completed', tone: 'success' };
+  if (progress > 0)    return { label: 'In Progress', tone: 'info' };
+  return { label: 'Pending', tone: 'neutral' };
 }
 
 /** Display-friendly date: "15 mar 2026" from "2026-03-15". Empty on null. */
@@ -212,7 +212,7 @@ function formatDate(iso: string | null): string {
   if (!iso) return '—';
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('es-ES', {
+  return d.toLocaleDateString('en-US', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -232,7 +232,7 @@ const MOCK_SPRINT_BASE: Omit<SprintInfo, 'id' | 'name'> = {
     totalFeatures: 2,
     taskDelay: 0,
     delayedTasks: 0,
-    cycleTime: '0.0 días',
+    cycleTime: '0.0 days',
   },
 };
 
@@ -295,7 +295,7 @@ export default function SprintPage() {
     const match = projectId != null
       ? projects.find(p => p.pjId === projectId)
       : undefined;
-    return match?.namePj ?? projects[0]?.namePj ?? 'Proyecto';
+    return match?.namePj ?? projects[0]?.namePj ?? 'Project';
   }, [projectId]);
 
   // Real sprint detail from the backend — name + dates come from
@@ -431,7 +431,7 @@ export default function SprintPage() {
       );
       const firstOwner = ownerIds.length > 0
         ? usersById.get(ownerIds[0]) ?? `User #${ownerIds[0]}`
-        : 'Sin asignar';
+        : 'Unassigned';
       const developer = ownerIds.length > 1
         ? `${firstOwner} +${ownerIds.length - 1}`
         : firstOwner;
@@ -446,7 +446,7 @@ export default function SprintPage() {
         statusLabel: status.label,
         statusTone:  status.tone,
         // Backend Feature has no description/long-text field today.
-        description: 'Sin descripción disponible.',
+        description: 'No description available.',
         priority:     priorityLabel(f.priorityFeature),
         priorityTone: priorityToTone(f.priorityFeature),
         progress,
@@ -553,7 +553,7 @@ export default function SprintPage() {
     const taskDTO = sprintTasks.find(t => t.taskId === taskId);
     if (!taskDTO) return;
 
-    const devName = taskDTO.userId ? (usersById.get(taskDTO.userId) ?? 'Sin asignar') : 'Sin asignar';
+    const devName = taskDTO.userId ? (usersById.get(taskDTO.userId) ?? 'Unassigned') : 'Unassigned';
 
     setSelectedTaskForModal({
       id: taskDTO.taskId,
@@ -562,7 +562,7 @@ export default function SprintPage() {
       storyPoints: taskDTO.storyPoints ?? null,
       priority: mapTaskPriority(taskDTO.priority),
       developerName: devName,
-      state: taskDTO.stateTask || 'Activa',
+      state: taskDTO.stateTask || 'Active',
     });
   };
 
@@ -577,8 +577,8 @@ export default function SprintPage() {
       {isPageLoading ? (
         <div className="max-w-7xl mx-auto">
           <PageLoading
-            title="Cargando sprint..."
-            subtitle="Estamos obteniendo sprint, tareas, features y asignaciones para mostrar la vista completa."
+            title="Loading sprint..."
+            subtitle="Fetching sprint data, tasks, features, and assignments for the full view."
           />
         </div>
       ) : (
@@ -595,7 +595,7 @@ export default function SprintPage() {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <CheckCircleIcon className="h-4 w-4" aria-hidden="true" />
-              {sprint.totalTasks} tareas totales
+              {sprint.totalTasks} total tasks
             </span>
           </div>
         </header>
@@ -606,40 +606,40 @@ export default function SprintPage() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           <h2 id="sprint-kpis-heading" className="sr-only">
-            KPIs del Sprint
+            Sprint KPIs
           </h2>
 
           <KpiCard
-            label="Progreso del Sprint"
+            label="Sprint Progress"
             value={`${sprint.kpis.progress}%`}
             icon={ArrowTrendingUpIcon}
             tone="success"
           />
 
           <KpiCard
-            label="Tasa de Arrastre"
+            label="Carryover Rate"
             value={`${sprint.kpis.carryRate}%`}
             icon={ExclamationCircleIcon}
             tone="warning"
           >
             <p className="text-xs text-gray-500">
-              {sprint.kpis.carriedFeatures} de {sprint.kpis.totalFeatures} tareas arrastradas
+              {sprint.kpis.carriedFeatures} of {sprint.kpis.totalFeatures} carried over tasks
             </p>
           </KpiCard>
 
           <KpiCard
-            label="Retraso en Tareas"
+            label="Task Delay"
             value={`${sprint.kpis.taskDelay}%`}
             icon={ExclamationCircleIcon}
             tone="danger"
           >
             <p className="text-xs text-gray-500">
-              {sprint.kpis.delayedTasks} tareas retrasadas
+              {sprint.kpis.delayedTasks} delayed tasks
             </p>
           </KpiCard>
 
           <KpiCard
-            label="Tiempo de Ciclo"
+            label="Cycle Time"
             value={sprint.kpis.cycleTime}
             icon={ClockIcon}
             tone="info"
@@ -659,7 +659,7 @@ export default function SprintPage() {
             className="flex items-center gap-3 text-xl font-bold text-gray-800"
           >
             <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
-            Features del Sprint
+            Sprint Features
           </h2>
 
           <FeatureFilters
@@ -680,8 +680,8 @@ export default function SprintPage() {
               {visibleFeatures.length === 0 ? (
                 <p className="text-sm text-gray-400">
                   {displayFeatures.length === 0
-                    ? 'Este sprint aún no tiene features.'
-                    : 'No hay features que coincidan con los filtros.'}
+                    ? 'This sprint has no features yet.'
+                    : 'No features match the current filters.'}
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -708,7 +708,7 @@ export default function SprintPage() {
               <FeatureDetailPanel feature={detail} onTaskClick={handleTaskClick} />
             ) : (
               <p className="text-sm text-gray-400 self-center text-center">
-                Selecciona una feature para ver su detalle.
+                Select a feature to view details.
               </p>
             )}
           </div>

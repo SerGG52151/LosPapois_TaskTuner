@@ -62,12 +62,12 @@ const sprintsCacheKey = (projectId: number) =>
  *
  * Layout (when expanded):
  *   ▸ 📁 Project name           ← clickable header toggles open/closed
- *      ├─ 👥 Equipo             ← link to /projects/:projectId/team
+ *      ├─ 👥 Team               ← link to /projects/:projectId/team
  *      ├─ SPRINTS               ← section label
  *      ├─ 📅 Sprint 1           ← links to /projects/:projectId/sprints/:sprintId
  *      ├─ 📅 Sprint 2           ← (active highlight handled by NavLink)
  *      ├─ 📅 Sprint 3
- *      └─ ➕ Añadir Sprint      ← CTA, brand-colored
+ *      └─ ➕ Add Sprint         ← CTA, brand-colored
  */
 function SidebarProjectGroup({
   projectId,
@@ -141,12 +141,12 @@ function SidebarProjectGroup({
         <span className="truncate">{projectName}</span>
       </button>
 
-      {/* Children — Equipo + SPRINTS list */}
+      {/* Children — Team + SPRINTS list */}
       {isOpen && (
         <div className="ml-4 mt-1 mb-1 border-l border-gray-100 pl-2 space-y-0.5">
           <SidebarItem
             icon={UserGroupIcon}
-            label="Equipo"
+            label="Team"
             to={`/projects/${projectId}/team`}
             dense
           />
@@ -169,7 +169,7 @@ function SidebarProjectGroup({
 
           {/* CTA — Add Sprint. Subtle brand-text style so the sprint list */}
           {/* stays the visual focus; the "+" + brand color still reads as */}
-          {/* an action. Same pattern is mirrored by "Añadir Proyecto" at */}
+          {/* an action. Same pattern is mirrored by "Add Project" at */}
           {/* the bottom of the project list. */}
           <button
             type="button"
@@ -179,7 +179,7 @@ function SidebarProjectGroup({
                        transition-colors text-left"
           >
             <PlusIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className="truncate">Añadir Sprint</span>
+            <span className="truncate">Add Sprint</span>
           </button>
         </div>
       )}

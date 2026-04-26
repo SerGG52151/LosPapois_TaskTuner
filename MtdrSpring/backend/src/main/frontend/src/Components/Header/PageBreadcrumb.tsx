@@ -21,13 +21,13 @@ interface Crumb {
 function buildCrumbs(pathname: string): Crumb[] {
   const projects = getFromStorage<ProjectDTO[]>(STORAGE_KEYS.PROJECTS) ?? [];
   const findProject = (id: number) =>
-    projects.find(p => p.pjId === id)?.namePj ?? 'Proyecto';
+    projects.find(p => p.pjId === id)?.namePj ?? 'Project';
 
   // Static top-level routes
   const staticMap: Record<string, string> = {
-    '/tasks':    'Tareas',
-    '/projects': 'Proyectos',
-    '/profile':  'Perfil',
+    '/tasks':    'Tasks',
+    '/projects': 'Projects',
+    '/profile':  'Profile',
   };
   if (staticMap[pathname]) {
     return [{ label: staticMap[pathname], current: true }];
@@ -39,7 +39,7 @@ function buildCrumbs(pathname: string): Crumb[] {
     const id = Number(teamMatch[1]);
     return [
       { label: findProject(id) },
-      { label: 'Equipo', current: true },
+      { label: 'Team', current: true },
     ];
   }
 

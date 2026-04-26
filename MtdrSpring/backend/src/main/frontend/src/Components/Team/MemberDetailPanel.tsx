@@ -65,10 +65,10 @@ const PRIORITY_BADGE: Record<MemberTaskPriority, string> = {
 };
 
 const PRIORITY_LABEL: Record<MemberTaskPriority, string> = {
-  high:   'Alta',
-  medium: 'Media',
-  low:    'Baja',
-  none:   'Sin definir',
+  high:   'High',
+  medium: 'Medium',
+  low:    'Low',
+  none:   'Not set',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,7 +86,7 @@ function MiniKpi({ label, value }: { label: string; value: string | number }) {
 }
 
 /**
- * Single task row in the "Tareas Asignadas" list.
+ * Single task row in the "Assigned Tasks" list.
  *
  * Layout:
  *   [status-icon] [name + meta]  [priority chip]  [chevron if expandable]
@@ -191,7 +191,7 @@ function MemberDetailPanel({
                        bg-blue-500 hover:bg-blue-600 text-white transition-colors"
           >
             <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
-            Editar
+            Edit
           </button>
           <button
             type="button"
@@ -200,20 +200,20 @@ function MemberDetailPanel({
                        bg-red-500 hover:bg-red-600 text-white transition-colors"
           >
             <TrashIcon className="h-4 w-4" aria-hidden="true" />
-            Eliminar
+            Delete
           </button>
         </div>
       </div>
 
       {/* KPIs */}
       <h4 className="text-base font-semibold text-gray-800 mb-3">
-        KPIs del Miembro en el Proyecto
+        Project Member KPIs
       </h4>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <MiniKpi label="Tareas Completadas" value={kpis.tasksCompleted} />
-        <MiniKpi label="Tiempo de Ciclo Promedio" value={kpis.cycleTime} />
-        <MiniKpi label="Features Asignadas" value={kpis.features} />
-        <MiniKpi label="Progreso Actual" value={kpis.progress} />
+        <MiniKpi label="Completed Tasks" value={kpis.tasksCompleted} />
+        <MiniKpi label="Average Cycle Time" value={kpis.cycleTime} />
+        <MiniKpi label="Assigned Features" value={kpis.features} />
+        <MiniKpi label="Current Progress" value={kpis.progress} />
       </div>
 
       {/* Tasks — shown only when the parent passes data, so the panel stays
@@ -221,11 +221,11 @@ function MemberDetailPanel({
       {tasks && (
         <>
           <h4 className="text-base font-semibold text-gray-800 mt-6 mb-3">
-            Tareas Asignadas ({tasks.length})
+            Assigned Tasks ({tasks.length})
           </h4>
           {tasks.length === 0 ? (
             <p className="text-sm text-gray-400">
-              Este miembro no tiene tareas asignadas en este proyecto.
+              This member has no tasks assigned in this project.
             </p>
           ) : (
             <ul className="space-y-2">

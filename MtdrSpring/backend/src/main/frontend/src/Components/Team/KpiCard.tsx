@@ -13,7 +13,7 @@ const TONE_CLASSES: Record<KpiTone, string> = {
 export interface KpiCardProps {
   /** Small label shown in the top-left of the card. */
   label: string;
-  /** Big bold value shown beneath the label (e.g. "50%", "2.9 días"). */
+  /** Big bold value shown beneath the label (e.g. "50%", "2.9 days"). */
   value: string;
   /** Heroicon component rendered inside the colored badge in the top-right. */
   icon: React.ComponentType<{ className?: string }>;

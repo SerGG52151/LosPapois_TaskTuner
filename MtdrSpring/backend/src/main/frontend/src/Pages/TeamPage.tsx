@@ -144,7 +144,7 @@ function computeMemberKpis(
 
   return {
     tasksCompleted: completedCount,
-    cycleTime:      `${avgCycleDays.toFixed(1)} días`,
+    cycleTime:      `${avgCycleDays.toFixed(1)} days`,
     features:       distinctFeatures.size,
     progress:       `${Math.round((completedCount / total) * 100)}%`,
   };
@@ -181,10 +181,10 @@ interface MemberKpis {
 }
 
 const MOCK_MEMBER_KPIS: Record<number, MemberKpis> = {
-  1: { tasksCompleted: 2, cycleTime: '2.5 días', features: 2, progress: '50%' },
-  2: { tasksCompleted: 0, cycleTime: '0 días',   features: 0, progress: '0%'  },
-  3: { tasksCompleted: 0, cycleTime: '0 días',   features: 0, progress: '0%'  },
-  4: { tasksCompleted: 0, cycleTime: '0 días',   features: 0, progress: '0%'  },
+  1: { tasksCompleted: 2, cycleTime: '2.5 days', features: 2, progress: '50%' },
+  2: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
+  3: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
+  4: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
 };
 
 const EMPTY_MEMBER_KPIS: MemberKpis = {
@@ -198,8 +198,8 @@ const PROJECT_KPIS = {
   avgProgress: 50,
   carryRate: 0,
   taskDelay: 0,
-  cycleTime: '2.9 días',
-  projectDelay: '0 días',
+  cycleTime: '2.9 days',
+  projectDelay: '0 days',
   expectedDate: '14/6/2026',
   sprintsCount: 3,
   delayedTasks: 0,
@@ -256,7 +256,7 @@ function Sparkline() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function TeamPage() {
-  // The route is /projects/:projectId/team — every "Equipo" link in the
+  // The route is /projects/:projectId/team — every "Team" link in the
   // sidebar carries its own projectId, so this param uniquely identifies
   // which project's team we're viewing (no more cross-group highlight bugs).
   const { projectId: rawProjectId } = useParams<{ projectId: string }>();
@@ -416,7 +416,7 @@ export default function TeamPage() {
       : undefined;
     return match?.namePj
       ?? projects[0]?.namePj
-      ?? 'Sistema de Gestión de Inventario';
+      ?? 'Inventory Management System';
   }, [projectId]);
 
   // Member KPIs:
@@ -479,8 +479,8 @@ export default function TeamPage() {
       description: taskDTO.infoTask ?? null,
       storyPoints: taskDTO.storyPoints,
       priority: mapPriority(taskDTO.priority),
-      developerName: dev?.name ?? 'Sin asignar',
-      state: taskDTO.dateEndRealTask ? 'Cerrada' : 'Activa',
+      developerName: dev?.name ?? 'Unassigned',
+      state: taskDTO.dateEndRealTask ? 'Closed' : 'Active',
     });
   };
 
@@ -495,8 +495,8 @@ export default function TeamPage() {
       {isPageLoading ? (
         <div className="max-w-7xl mx-auto">
           <PageLoading
-            title="Cargando equipo del proyecto..."
-            subtitle="Estamos obteniendo miembros, tareas y features para mostrar la vista completa."
+            title="Loading project team..."
+            subtitle="Fetching members, tasks, and features to render the full view."
           />
         </div>
       ) : (
@@ -504,10 +504,10 @@ export default function TeamPage() {
         {/* Page header */}
         <header>
           <h1 className="text-3xl font-bold text-gray-900">
-            {projectName} - Equipo
+            {projectName} - Team
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Gestiona los miembros del equipo y visualiza sus KPIs
+            Manage team members and track their KPIs
           </p>
         </header>
 
@@ -518,11 +518,11 @@ export default function TeamPage() {
             className="flex items-center gap-3 text-xl font-bold text-gray-800 mb-4"
           >
             <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
-            KPIs Promedio del Proyecto
+            Average Project KPIs
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <KpiCard
-              label="Progreso Promedio"
+              label="Average Progress"
               value={`${PROJECT_KPIS.avgProgress}%`}
               icon={ArrowTrendingUpIcon}
               tone="success"
@@ -531,29 +531,29 @@ export default function TeamPage() {
             </KpiCard>
 
             <KpiCard
-              label="Tasa de Arrastre Promedio"
+              label="Average Carryover Rate"
               value={`${PROJECT_KPIS.carryRate}%`}
               icon={ExclamationCircleIcon}
               tone="warning"
             >
               <p className="text-xs text-gray-500">
-                Promedio en {PROJECT_KPIS.sprintsCount} sprints
+                Average across {PROJECT_KPIS.sprintsCount} sprints
               </p>
             </KpiCard>
 
             <KpiCard
-              label="Retraso Promedio en Tareas"
+              label="Average Task Delay"
               value={`${PROJECT_KPIS.taskDelay}%`}
               icon={ExclamationCircleIcon}
               tone="danger"
             >
               <p className="text-xs text-gray-500">
-                {PROJECT_KPIS.delayedTasks} tareas retrasadas
+                {PROJECT_KPIS.delayedTasks} delayed tasks
               </p>
             </KpiCard>
 
             <KpiCard
-              label="Tiempo de Ciclo Promedio"
+              label="Average Cycle Time"
               value={PROJECT_KPIS.cycleTime}
               icon={ClockIcon}
               tone="info"
@@ -562,13 +562,13 @@ export default function TeamPage() {
             </KpiCard>
 
             <KpiCard
-              label="Retraso del Proyecto"
+              label="Project Delay"
               value={PROJECT_KPIS.projectDelay}
               icon={CalendarDaysIcon}
               tone="success"
             >
               <p className="text-xs text-gray-500">
-                Fecha esperada: {PROJECT_KPIS.expectedDate}
+                Expected date: {PROJECT_KPIS.expectedDate}
               </p>
             </KpiCard>
           </div>
@@ -585,7 +585,7 @@ export default function TeamPage() {
             className="flex items-center gap-3 text-xl font-bold text-gray-800 mb-6"
           >
             <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
-            Miembros del Equipo
+            Team Members
           </h2>
 
           <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
@@ -597,12 +597,12 @@ export default function TeamPage() {
                   aria-hidden="true"
                 />
                 <span className="text-sm font-semibold text-gray-800">
-                  Miembros ({members.length})
+                  Members ({members.length})
                 </span>
               </div>
               {members.length === 0 ? (
                 <p className="text-sm text-gray-400 px-1">
-                  Aún no hay miembros en este proyecto.
+                  No members yet in this project.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -632,7 +632,7 @@ export default function TeamPage() {
               />
             ) : (
               <p className="text-sm text-gray-400 self-center text-center">
-                Selecciona un miembro para ver su detalle.
+                Select a member to view details.
               </p>
             )}
           </div>

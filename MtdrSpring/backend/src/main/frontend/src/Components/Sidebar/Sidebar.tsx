@@ -26,9 +26,9 @@ interface ProjectDTO {
 // structure (expandable groups, sprints, etc.) be reviewed without a live API.
 // Remove or empty this array once the backend wiring is back in place.
 const MOCK_PROJECTS: ProjectDTO[] = [
-  { pjId: -1, namePj: 'Proyecto Demo Alpha' },
-  { pjId: -2, namePj: 'Proyecto Demo Beta' },
-  { pjId: -3, namePj: 'Proyecto Demo Gamma' },
+  { pjId: -1, namePj: 'Demo Project Alpha' },
+  { pjId: -2, namePj: 'Demo Project Beta' },
+  { pjId: -3, namePj: 'Demo Project Gamma' },
 ];
 
 export interface SidebarProps {
@@ -168,9 +168,9 @@ function Sidebar({ isOpen }: SidebarProps) {
             ))
           )}
 
-          {/* CTA at the end of the projects list — mirrors the "Añadir Sprint" */}
+          {/* CTA at the end of the projects list — mirrors the "Add Sprint" */}
           {/* pattern inside each project so the user learns one convention: */}
-          {/* "+ Añadir X" always closes its respective list. */}
+          {/* "+ Add X" always closes its respective list. */}
           <button
             type="button"
             onClick={handleAddProject}
@@ -179,7 +179,7 @@ function Sidebar({ isOpen }: SidebarProps) {
                        transition-colors text-left"
           >
             <PlusIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className="truncate">Añadir Proyecto</span>
+            <span className="truncate">Add Project</span>
           </button>
         </nav>
 

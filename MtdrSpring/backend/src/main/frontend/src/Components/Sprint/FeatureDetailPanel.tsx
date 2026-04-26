@@ -34,7 +34,7 @@ const PRIORITY_TEXT: Record<PriorityTone, string> = {
 };
 
 /**
- * Single task row in the "Tareas Asociadas" list.
+ * Single task row in the "Linked Tasks" list.
  *
  * Behaviour:
  *   - No description → renders as a plain row, not interactive.
@@ -84,9 +84,9 @@ export interface FeatureDetailPanelProps {
 
 /**
  * Right-hand panel that explodes the selected feature into:
- *   - Title + blue "Descripción" callout
+ *   - Title + blue "Description" callout
  *   - Stats block (developer / SPs / priority / progress) + progress bar
- *   - "Tareas Asociadas" list (or empty state)
+ *   - "Linked Tasks" list (or empty state)
  */
 function FeatureDetailPanel({ feature, onTaskClick }: FeatureDetailPanelProps) {
   const priorityClass =
@@ -104,7 +104,7 @@ function FeatureDetailPanel({ feature, onTaskClick }: FeatureDetailPanelProps) {
             className="h-5 w-5 text-blue-500"
             aria-hidden="true"
           />
-          <h4 className="text-sm font-semibold text-gray-800">Descripción</h4>
+          <h4 className="text-sm font-semibold text-gray-800">Description</h4>
         </div>
         <p className="text-sm text-gray-700">{feature.description}</p>
       </div>
@@ -112,10 +112,10 @@ function FeatureDetailPanel({ feature, onTaskClick }: FeatureDetailPanelProps) {
       {/* Stats + progress */}
       <div className="bg-gray-50 border border-gray-100 rounded-lg p-4">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-          <Stat label="Desarrollador" value={feature.developer} />
+          <Stat label="Developer" value={feature.developer} />
           <Stat label="Story Points" value={`${feature.storyPoints} SPs`} />
-          <Stat label="Prioridad" value={feature.priority} valueClass={priorityClass} />
-          <Stat label="Progreso" value={`${safeProgress}%`} />
+          <Stat label="Priority" value={feature.priority} valueClass={priorityClass} />
+          <Stat label="Progress" value={`${safeProgress}%`} />
         </div>
 
         <div
@@ -131,13 +131,13 @@ function FeatureDetailPanel({ feature, onTaskClick }: FeatureDetailPanelProps) {
           />
         </div>
         <div className="text-xs text-gray-500 mt-2 text-center">
-          {feature.completedTasks} de {feature.totalTasks} tareas completadas
+          {feature.completedTasks} of {feature.totalTasks} tasks completed
         </div>
       </div>
 
       {/* Tasks */}
       <div>
-        <h4 className="text-base font-semibold text-gray-800 mb-3">Tareas Asociadas</h4>
+        <h4 className="text-base font-semibold text-gray-800 mb-3">Linked Tasks</h4>
         {feature.tasks && feature.tasks.length > 0 ? (
           <ul className="space-y-2">
             {feature.tasks.map(t => (
@@ -145,7 +145,7 @@ function FeatureDetailPanel({ feature, onTaskClick }: FeatureDetailPanelProps) {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-gray-400">Sin tareas asociadas</p>
+          <p className="text-sm text-gray-400">No linked tasks</p>
         )}
       </div>
     </div>
