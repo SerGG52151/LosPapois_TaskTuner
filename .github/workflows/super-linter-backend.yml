@@ -36,10 +36,3 @@ jobs:
 
           VALIDATE_JAVA: true
           JAVA_FILE_NAME: java_checks.xml
-
-          VALIDATE_TYPESCRIPT_ES: false
-          VALIDATE_JAVASCRIPT_ES: false
-          VALIDATE_CSS: false
-          VALIDATE_HTML: false
-          VALIDATE_JSON: false
-          VALIDATE_YAML: false

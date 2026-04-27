@@ -38,5 +38,3 @@ jobs:
           VALIDATE_HTML: true
           VALIDATE_JSON: true
           VALIDATE_YAML: true
-
-          VALIDATE_JAVA: false
