@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   CalendarDaysIcon,
+  ChartBarIcon,
   ChevronRightIcon,
   FolderIcon,
   PlusIcon,
@@ -148,6 +149,13 @@ function SidebarProjectGroup({
             icon={UserGroupIcon}
             label="Team"
             to={`/projects/${projectId}/team`}
+            dense
+          />
+
+          <SidebarItem
+            icon={ChartBarIcon}
+            label="Statistics"
+            to={`/projects/${projectId}/statistics`}
             dense
           />
 

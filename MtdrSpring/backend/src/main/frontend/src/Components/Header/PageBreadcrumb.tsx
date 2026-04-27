@@ -43,6 +43,16 @@ function buildCrumbs(pathname: string): Crumb[] {
     ];
   }
 
+  // /projects/:projectId/statistics
+  const statsMatch = pathname.match(/^\/projects\/(-?\d+)\/statistics\/?$/);
+  if (statsMatch) {
+    const id = Number(statsMatch[1]);
+    return [
+      { label: findProject(id) },
+      { label: 'Statistics', current: true },
+    ];
+  }
+
   // /projects/:projectId/sprints/:sprintId
   const sprintMatch = pathname.match(
     /^\/projects\/(-?\d+)\/sprints\/(-?\d+)\/?$/
