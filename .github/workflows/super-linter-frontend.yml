@@ -38,6 +38,15 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Lint TypeScript with project ESLint config
+        run: npx eslint --ext .ts,.tsx src
+
+      - name: Install Stylelint for Tailwind CSS check
+        run: npm install --no-save stylelint
+
+      - name: Lint Tailwind CSS
+        run: npx stylelint "src/**/*.css" --config .stylelintrc.tailwind-ci.json --allow-empty-input
+
       - name: Run Super-Linter (frontend)
         uses: github/super-linter/slim@v7
         env:
@@ -46,9 +55,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           FILTER_REGEX_INCLUDE: MtdrSpring/backend/src/main/frontend/.*
 
-          VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_CSS: true
           VALIDATE_HTML: true
           VALIDATE_JSON: true
           VALIDATE_YAML: true
