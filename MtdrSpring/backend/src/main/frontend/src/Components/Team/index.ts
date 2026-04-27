@@ -15,3 +15,14 @@ export type {
   MemberTaskLite,
   MemberTaskPriority,
 } from './MemberDetailPanel';
+
+export { default as AddTeamMemberModal } from './AddTeamMemberModal';
+export type {
+  AddTeamMemberModalProps,
+  NewTeamMemberData,
+} from './AddTeamMemberModal';
+
+export { default as ConfirmMemberDeleteModal } from './ConfirmMemberDeleteModal';
+export type {
+  ConfirmMemberDeleteModalProps,
+} from './ConfirmMemberDeleteModal';

@@ -22,3 +22,13 @@ export type {
 
 export { default as AddSprintModal } from './AddSprintModal';
 export type { AddSprintModalProps, NewSprintData } from './AddSprintModal';
+
+export { default as DeveloperTaskBoard } from './DeveloperTaskBoard';
+export type {
+  DeveloperTaskBoardProps,
+  DeveloperBoardMember,
+  DeveloperBoardKpis,
+  DeveloperBoardTask,
+  TaskBoardMode,
+  TaskState,
+} from './DeveloperTaskBoard';

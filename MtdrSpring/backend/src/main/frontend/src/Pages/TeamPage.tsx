@@ -8,11 +8,14 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import {
+  AddTeamMemberModal,
+  ConfirmMemberDeleteModal,
   KpiCard,
   MemberDetailPanel,
   MemberListItem,
 } from '../Components/Team';
 import type {
+  NewTeamMemberData,
   AvatarTone,
   MemberTaskLite,
   MemberTaskPriority,
@@ -47,12 +50,15 @@ interface UserDTO {
   mail: string | null;
   idTelegram: string;
   role: string;
+  password?: string | null;
 }
 
 interface MockMember {
   id: number;
   name: string;
   role: string;
+  rawRole?: string;
+  telegram?: string;
   email: string;
   avatarTone: AvatarTone;
 }
@@ -145,6 +151,7 @@ function computeMemberKpis(
   return {
     tasksCompleted: completedCount,
     cycleTime:      `${avgCycleDays.toFixed(1)} days`,
+    assignedTasks:  total,
     features:       distinctFeatures.size,
     progress:       `${Math.round((completedCount / total) * 100)}%`,
   };
@@ -161,35 +168,39 @@ function mapBackendUser(u: UserDTO): MockMember {
     role: u.role
       ? u.role.charAt(0).toUpperCase() + u.role.slice(1)
       : 'Member',
+    rawRole: u.role,
+    telegram: u.idTelegram,
     email: u.mail ?? u.idTelegram, // fall back to telegram handle if no email
     avatarTone: 'brand',
   };
 }
 
 const MOCK_MEMBERS: MockMember[] = [
-  { id: 1, name: 'Ana García',   role: 'Frontend Developer', email: 'ana.garcia@tasktuner.com',   avatarTone: 'brand'   },
-  { id: 2, name: 'Carlos Ruiz',  role: 'Backend Developer',  email: 'carlos.ruiz@tasktuner.com',  avatarTone: 'brand'   },
-  { id: 3, name: 'María López',  role: 'QA Engineer',        email: 'maria.lopez@tasktuner.com',  avatarTone: 'brand'   },
-  { id: 4, name: 'Juan Pérez',   role: 'DevOps Engineer',    email: 'juan.perez@tasktuner.com',   avatarTone: 'neutral' },
+  { id: 1, name: 'Ana García',   role: 'Frontend Developer', rawRole: 'developer', telegram: '@ana_garcia', email: 'ana.garcia@tasktuner.com',   avatarTone: 'brand'   },
+  { id: 2, name: 'Carlos Ruiz',  role: 'Backend Developer',  rawRole: 'developer', telegram: '@carlos_ruiz', email: 'carlos.ruiz@tasktuner.com',  avatarTone: 'brand'   },
+  { id: 3, name: 'María López',  role: 'QA Engineer',        rawRole: 'developer', telegram: '@maria_lopez', email: 'maria.lopez@tasktuner.com',  avatarTone: 'brand'   },
+  { id: 4, name: 'Juan Pérez',   role: 'DevOps Engineer',    rawRole: 'developer', telegram: '@juan_perez', email: 'juan.perez@tasktuner.com',   avatarTone: 'neutral' },
 ];
 
 interface MemberKpis {
   tasksCompleted: number;
   cycleTime: string;
+  assignedTasks: number;
   features: number;
   progress: string;
 }
 
 const MOCK_MEMBER_KPIS: Record<number, MemberKpis> = {
-  1: { tasksCompleted: 2, cycleTime: '2.5 days', features: 2, progress: '50%' },
-  2: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
-  3: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
-  4: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
+  1: { tasksCompleted: 2, cycleTime: '2.5 days', assignedTasks: 4, features: 2, progress: '50%' },
+  2: { tasksCompleted: 0, cycleTime: '0 days',   assignedTasks: 0, features: 0, progress: '0%'  },
+  3: { tasksCompleted: 0, cycleTime: '0 days',   assignedTasks: 0, features: 0, progress: '0%'  },
+  4: { tasksCompleted: 0, cycleTime: '0 days',   assignedTasks: 0, features: 0, progress: '0%'  },
 };
 
 const EMPTY_MEMBER_KPIS: MemberKpis = {
   tasksCompleted: 0,
   cycleTime: '—',
+  assignedTasks: 0,
   features: 0,
   progress: '—',
 };
@@ -210,30 +221,26 @@ const PROJECT_KPIS = {
 // to these mock cards. Promote to /Components when real data drives them.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Three-segment ring approximating the screenshot's progress donut. */
-function DonutChart({ value }: { value: number }) {
-  const radius = 28;
-  const stroke = 9;
-  const c = 2 * Math.PI * radius;
-  const greenLen = Math.max(0, Math.min(value, 100)) / 100 * c;
-  const blueLen = 0.12 * c;
+/** Linear progress bar used by the top-level progress KPI cards. */
+function ProgressBar({ value }: { value: number }) {
+  const safe = Math.max(0, Math.min(value, 100));
+
   return (
-    <svg width="80" height="80" viewBox="0 0 80 80" className="mx-auto" aria-hidden="true">
-      <g transform="rotate(-90 40 40)">
-        <circle cx="40" cy="40" r={radius} fill="none" stroke="#E5E7EB" strokeWidth={stroke} />
-        <circle
-          cx="40" cy="40" r={radius} fill="none"
-          stroke="#22C55E" strokeWidth={stroke}
-          strokeDasharray={`${greenLen} ${c}`}
+    <div className="space-y-1.5">
+      <div
+        className="w-full h-2.5 rounded-full bg-green-50 border border-green-100 overflow-hidden"
+        role="progressbar"
+        aria-valuenow={safe}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 transition-[width] duration-500"
+          style={{ width: `${safe}%` }}
         />
-        <circle
-          cx="40" cy="40" r={radius} fill="none"
-          stroke="#3B82F6" strokeWidth={stroke}
-          strokeDasharray={`${blueLen} ${c}`}
-          strokeDashoffset={-greenLen}
-        />
-      </g>
-    </svg>
+      </div>
+      <div className="text-[11px] text-green-700 font-medium">Progress tracked at {safe}%</div>
+    </div>
   );
 }
 
@@ -287,6 +294,17 @@ export default function TeamPage() {
   );
 
   const [selectedTaskForModal, setSelectedTaskForModal] = useState<TaskDetailData | null>(null);
+  const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
+  const [addMemberSubmitting, setAddMemberSubmitting] = useState(false);
+  const [addMemberError, setAddMemberError] = useState<string | null>(null);
+  const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
+  const [editMemberSubmitting, setEditMemberSubmitting] = useState(false);
+  const [editMemberError, setEditMemberError] = useState<string | null>(null);
+  const [isDeleteMemberModalOpen, setIsDeleteMemberModalOpen] = useState(false);
+  const [deleteMemberSubmitting, setDeleteMemberSubmitting] = useState(false);
+  const [deleteMemberError, setDeleteMemberError] = useState<string | null>(null);
+  const [membersRefreshToken, setMembersRefreshToken] = useState(0);
+  const [tasksRefreshToken, setTasksRefreshToken] = useState(0);
   const [membersLoading, setMembersLoading] = useState(
     projectId != null && projectId >= 0
   );
@@ -348,7 +366,7 @@ export default function TeamPage() {
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [projectId, membersRefreshToken]);
 
   // Background refresh of the task list (used by the per-member KPIs).
   // Runs once on mount — the cache holds across project switches so we
@@ -373,7 +391,7 @@ export default function TeamPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tasksRefreshToken]);
 
   // One-time fetch of all features for the per-member feature list lookup.
   // Small payload, doesn't change often — no per-project caching needed.
@@ -484,12 +502,194 @@ export default function TeamPage() {
     });
   };
 
+  const handleOpenAddMember = () => {
+    setAddMemberError(null);
+    setIsAddMemberModalOpen(true);
+  };
+
+  const handleCloseAddMember = () => {
+    if (addMemberSubmitting) return;
+    setAddMemberError(null);
+    setIsAddMemberModalOpen(false);
+  };
+
+  const handleConfirmAddMember = async (data: NewTeamMemberData) => {
+    if (projectId == null || projectId < 0) {
+      setAddMemberError('Cannot add members to demo projects.');
+      return;
+    }
+
+    setAddMemberSubmitting(true);
+    setAddMemberError(null);
+
+    try {
+      const newUserPayload = {
+        nameUser: data.nameUser,
+        password: null,
+        idTelegram: data.idTelegram,
+        mail: data.mail,
+        role: 'developer',
+      };
+
+      const userResponse = await fetch('/api/users-tt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newUserPayload),
+      });
+      if (!userResponse.ok) {
+        throw new Error(`Failed to create user (${userResponse.status})`);
+      }
+
+      const createdUser = (await userResponse.json()) as UserDTO;
+
+      const membershipResponse = await fetch(
+        `/api/project-memberships?pjId=${projectId}&userId=${createdUser.userId}`,
+        { method: 'POST' }
+      );
+      if (!membershipResponse.ok) {
+        throw new Error(`Failed to add project membership (${membershipResponse.status})`);
+      }
+
+      setIsAddMemberModalOpen(false);
+      setMembersRefreshToken(t => t + 1);
+    } catch (error) {
+      console.error('[TeamPage] add member failed', error);
+      setAddMemberError('Could not add the new team member. Please check the data and try again.');
+    } finally {
+      setAddMemberSubmitting(false);
+    }
+  };
+
+  const handleOpenEditMember = () => {
+    if (!selectedMember || projectId == null || projectId < 0) return;
+    setEditMemberError(null);
+    setIsEditMemberModalOpen(true);
+  };
+
+  const handleCloseEditMember = () => {
+    if (editMemberSubmitting) return;
+    setEditMemberError(null);
+    setIsEditMemberModalOpen(false);
+  };
+
+  const handleConfirmEditMember = async (data: NewTeamMemberData) => {
+    if (!selectedMember || projectId == null || projectId < 0) {
+      setEditMemberError('Cannot edit members in demo projects.');
+      return;
+    }
+
+    setEditMemberSubmitting(true);
+    setEditMemberError(null);
+    try {
+      const payload: UserDTO = {
+        userId: selectedMember.id,
+        nameUser: data.nameUser,
+        password: null,
+        idTelegram: data.idTelegram,
+        mail: data.mail,
+        role: selectedMember.rawRole ?? 'developer',
+      };
+
+      const response = await fetch(`/api/users-tt/${selectedMember.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update user (${response.status})`);
+      }
+
+      setIsEditMemberModalOpen(false);
+      setMembersRefreshToken(t => t + 1);
+    } catch (error) {
+      console.error('[TeamPage] edit member failed', error);
+      setEditMemberError('Could not update team member data. Please try again.');
+    } finally {
+      setEditMemberSubmitting(false);
+    }
+  };
+
+  const handleOpenDeleteMember = () => {
+    if (!selectedMember || projectId == null || projectId < 0) return;
+    setDeleteMemberError(null);
+    setIsDeleteMemberModalOpen(true);
+  };
+
+  const handleCloseDeleteMember = () => {
+    if (deleteMemberSubmitting) return;
+    setDeleteMemberError(null);
+    setIsDeleteMemberModalOpen(false);
+  };
+
+  const handleConfirmDeleteMember = async () => {
+    if (!selectedMember || projectId == null || projectId < 0) {
+      setDeleteMemberError('Cannot remove members in demo projects.');
+      return;
+    }
+
+    setDeleteMemberSubmitting(true);
+    setDeleteMemberError(null);
+    try {
+      const response = await fetch(
+        `/api/project-memberships/project/${projectId}/user/${selectedMember.id}/with-tasks`,
+        { method: 'DELETE' }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete member and tasks (${response.status})`);
+      }
+
+      setIsDeleteMemberModalOpen(false);
+      setMembersRefreshToken(t => t + 1);
+      setTasksRefreshToken(t => t + 1);
+    } catch (error) {
+      console.error('[TeamPage] delete member failed', error);
+      setDeleteMemberError('Could not remove team member. Please try again.');
+    } finally {
+      setDeleteMemberSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-gray-50 min-h-full px-6 py-8">
       <TaskDetailModal
         isOpen={selectedTaskForModal !== null}
         onClose={() => setSelectedTaskForModal(null)}
         task={selectedTaskForModal}
+      />
+      <AddTeamMemberModal
+        isOpen={isAddMemberModalOpen}
+        onClose={handleCloseAddMember}
+        onConfirm={handleConfirmAddMember}
+        submitting={addMemberSubmitting}
+        error={addMemberError}
+      />
+      <AddTeamMemberModal
+        isOpen={isEditMemberModalOpen}
+        onClose={handleCloseEditMember}
+        onConfirm={handleConfirmEditMember}
+        initialData={
+          selectedMember
+            ? {
+                nameUser: selectedMember.name,
+                idTelegram: selectedMember.telegram ?? '',
+                mail: selectedMember.email,
+              }
+            : null
+        }
+        title="Edit Team Member"
+        confirmLabel="Save Changes"
+        submitting={editMemberSubmitting}
+        error={editMemberError}
+      />
+      <ConfirmMemberDeleteModal
+        isOpen={isDeleteMemberModalOpen}
+        memberName={selectedMember?.name}
+        onClose={handleCloseDeleteMember}
+        onConfirm={handleConfirmDeleteMember}
+        submitting={deleteMemberSubmitting}
+        error={deleteMemberError}
       />
 
       {isPageLoading ? (
@@ -527,7 +727,7 @@ export default function TeamPage() {
               icon={ArrowTrendingUpIcon}
               tone="success"
             >
-              <DonutChart value={PROJECT_KPIS.avgProgress} />
+              <ProgressBar value={PROJECT_KPIS.avgProgress} />
             </KpiCard>
 
             <KpiCard
@@ -580,13 +780,25 @@ export default function TeamPage() {
           className="bg-white border border-gray-200 rounded-xl p-6
                      shadow-sm shadow-gray-200/60"
         >
-          <h2
-            id="members-heading"
-            className="flex items-center gap-3 text-xl font-bold text-gray-800 mb-6"
-          >
-            <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
-            Team Members
-          </h2>
+          <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+            <h2
+              id="members-heading"
+              className="flex items-center gap-3 text-xl font-bold text-gray-800"
+            >
+              <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
+              Team Members
+            </h2>
+
+            <button
+              type="button"
+              onClick={handleOpenAddMember}
+              disabled={projectId == null || projectId < 0}
+              className="px-4 py-2.5 rounded-xl bg-brand text-white font-semibold text-sm
+                         hover:bg-brand-dark transition-colors disabled:opacity-60"
+            >
+              Add Team Member
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
             {/* Left: members list */}
@@ -626,8 +838,8 @@ export default function TeamPage() {
                 member={selectedMember}
                 kpis={selectedKpis}
                 tasks={selectedTasks}
-                onEdit={() => console.log('[TeamPage] edit', selectedMember.id)}
-                onDelete={() => console.log('[TeamPage] delete', selectedMember.id)}
+                onEdit={handleOpenEditMember}
+                onDelete={handleOpenDeleteMember}
                 onTaskClick={handleTaskClick}
               />
             ) : (

@@ -2,9 +2,13 @@ package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.model.ProjectUserKey;
 import com.springboot.MyTodoList.model.ProjectUserTT;
+import com.springboot.MyTodoList.model.TaskTT;
 import com.springboot.MyTodoList.repository.ProjectUserTTRepository;
+import com.springboot.MyTodoList.repository.SprintTaskTTRepository;
+import com.springboot.MyTodoList.repository.TaskTTRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -28,6 +32,12 @@ public class ProjectUserTTService {
 
     @Autowired
     private ProjectUserTTRepository projectUserTTRepository;
+
+    @Autowired
+    private TaskTTRepository taskTTRepository;
+
+    @Autowired
+    private SprintTaskTTRepository sprintTaskTTRepository;
 
     // ─── Read Operations ─────────────────────────────────────────────────
 
@@ -103,6 +113,38 @@ public class ProjectUserTTService {
      */
     public boolean removeMember(long pjId, long userId) {
         try {
+            ProjectUserKey key = new ProjectUserKey(pjId, userId);
+            projectUserTTRepository.deleteById(key);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Removes a member from a project and cleans up all tasks assigned to
+     * that member within the same project, including SPRINT_TASK_TT links.
+     *
+     * Transactional by design: either all cleanup steps commit together or
+     * everything is rolled back.
+     */
+    @Transactional
+    public boolean removeMemberAndAssignedTasks(long pjId, long userId) {
+        try {
+            // 1) Find tasks that belong to this project and are assigned to this user.
+            List<TaskTT> assignedTasks = taskTTRepository.findByPjIdAndUserId(pjId, userId);
+
+            // 2) Remove sprint-task links first to avoid FK/orphan issues.
+            for (TaskTT task : assignedTasks) {
+                sprintTaskTTRepository.deleteByIdTaskId(task.getTaskId());
+            }
+
+            // 3) Remove the tasks themselves.
+            for (TaskTT task : assignedTasks) {
+                taskTTRepository.deleteById(task.getTaskId());
+            }
+
+            // 4) Remove membership row from PROJECT_USER_TT.
             ProjectUserKey key = new ProjectUserKey(pjId, userId);
             projectUserTTRepository.deleteById(key);
             return true;

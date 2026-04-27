@@ -7,6 +7,7 @@ import SignupPage from './Pages/SignupPage';
 import ProfilePage from './Pages/ProfilePage';
 import TeamPage from './Pages/TeamPage';
 import SprintPage from './Pages/SprintPage';
+import StatisticsPage from './Pages/StatisticsPage';
 import ProjectsPage from './Pages/ProjectsPage';
 import { Sidebar, SidebarToggle } from './Components/Sidebar';
 import PageBreadcrumb from './Components/Header/PageBreadcrumb';
@@ -48,6 +49,7 @@ function App() {
       {/* sprintId in the URL gives every sidebar link a unique address, */}
       {/* which keeps NavLink's active highlight per-group correct. */}
       <Route path="/projects/:projectId/team" element={<TeamPage />} />
+      <Route path="/projects/:projectId/statistics" element={<StatisticsPage />} />
       <Route path="/projects/:projectId/sprints/:sprintId" element={<SprintPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/login" replace />} />
