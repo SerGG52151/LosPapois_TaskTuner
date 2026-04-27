@@ -18,11 +18,25 @@ jobs:
     name: Lint Frontend
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: MtdrSpring/backend/src/main/frontend
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: MtdrSpring/backend/src/main/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
 
       - name: Run Super-Linter (frontend)
         uses: github/super-linter/slim@v7
