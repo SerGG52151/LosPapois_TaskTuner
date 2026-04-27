@@ -151,6 +151,7 @@ function computeMemberKpis(
   return {
     tasksCompleted: completedCount,
     cycleTime:      `${avgCycleDays.toFixed(1)} days`,
+    assignedTasks:  total,
     features:       distinctFeatures.size,
     progress:       `${Math.round((completedCount / total) * 100)}%`,
   };
@@ -184,20 +185,22 @@ const MOCK_MEMBERS: MockMember[] = [
 interface MemberKpis {
   tasksCompleted: number;
   cycleTime: string;
+  assignedTasks: number;
   features: number;
   progress: string;
 }
 
 const MOCK_MEMBER_KPIS: Record<number, MemberKpis> = {
-  1: { tasksCompleted: 2, cycleTime: '2.5 days', features: 2, progress: '50%' },
-  2: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
-  3: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
-  4: { tasksCompleted: 0, cycleTime: '0 days',   features: 0, progress: '0%'  },
+  1: { tasksCompleted: 2, cycleTime: '2.5 days', assignedTasks: 4, features: 2, progress: '50%' },
+  2: { tasksCompleted: 0, cycleTime: '0 days',   assignedTasks: 0, features: 0, progress: '0%'  },
+  3: { tasksCompleted: 0, cycleTime: '0 days',   assignedTasks: 0, features: 0, progress: '0%'  },
+  4: { tasksCompleted: 0, cycleTime: '0 days',   assignedTasks: 0, features: 0, progress: '0%'  },
 };
 
 const EMPTY_MEMBER_KPIS: MemberKpis = {
   tasksCompleted: 0,
   cycleTime: '—',
+  assignedTasks: 0,
   features: 0,
   progress: '—',
 };
@@ -218,30 +221,26 @@ const PROJECT_KPIS = {
 // to these mock cards. Promote to /Components when real data drives them.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Three-segment ring approximating the screenshot's progress donut. */
-function DonutChart({ value }: { value: number }) {
-  const radius = 28;
-  const stroke = 9;
-  const c = 2 * Math.PI * radius;
-  const greenLen = Math.max(0, Math.min(value, 100)) / 100 * c;
-  const blueLen = 0.12 * c;
+/** Linear progress bar used by the top-level progress KPI cards. */
+function ProgressBar({ value }: { value: number }) {
+  const safe = Math.max(0, Math.min(value, 100));
+
   return (
-    <svg width="80" height="80" viewBox="0 0 80 80" className="mx-auto" aria-hidden="true">
-      <g transform="rotate(-90 40 40)">
-        <circle cx="40" cy="40" r={radius} fill="none" stroke="#E5E7EB" strokeWidth={stroke} />
-        <circle
-          cx="40" cy="40" r={radius} fill="none"
-          stroke="#22C55E" strokeWidth={stroke}
-          strokeDasharray={`${greenLen} ${c}`}
+    <div className="space-y-1.5">
+      <div
+        className="w-full h-2.5 rounded-full bg-green-50 border border-green-100 overflow-hidden"
+        role="progressbar"
+        aria-valuenow={safe}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 transition-[width] duration-500"
+          style={{ width: `${safe}%` }}
         />
-        <circle
-          cx="40" cy="40" r={radius} fill="none"
-          stroke="#3B82F6" strokeWidth={stroke}
-          strokeDasharray={`${blueLen} ${c}`}
-          strokeDashoffset={-greenLen}
-        />
-      </g>
-    </svg>
+      </div>
+      <div className="text-[11px] text-green-700 font-medium">Progress tracked at {safe}%</div>
+    </div>
   );
 }
 
@@ -728,7 +727,7 @@ export default function TeamPage() {
               icon={ArrowTrendingUpIcon}
               tone="success"
             >
-              <DonutChart value={PROJECT_KPIS.avgProgress} />
+              <ProgressBar value={PROJECT_KPIS.avgProgress} />
             </KpiCard>
 
             <KpiCard

@@ -15,6 +15,7 @@ export interface DeveloperBoardKpis {
   tasksCompleted: number;
   cycleTime: string;
   assignedTasks: number;
+  totalStoryPoints: number;
   progress: string;
 }
 
@@ -238,10 +239,11 @@ export default function DeveloperTaskBoard({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <MiniKpi label="Completed Tasks" value={kpis.tasksCompleted} />
               <MiniKpi label="Average Cycle Time" value={kpis.cycleTime} />
               <MiniKpi label="Assigned Tasks" value={kpis.assignedTasks} />
+              <MiniKpi label="Total Story Points" value={`${kpis.totalStoryPoints} SP`} />
               <MiniKpi label="Current Progress" value={kpis.progress} />
             </div>
 

@@ -8,6 +8,9 @@ export interface FeatureTaskLite {
   name: string;
   /** Long-text description (TaskTT.infoTask). Optional — empty/null = no body shown. */
   description?: string | null;
+  storyPoints?: number | null;
+  priority?: 'high' | 'medium' | 'low' | 'none';
+  state?: 'active' | 'done' | 'delayed';
 }
 
 export interface FeatureDetailData {
@@ -33,6 +36,32 @@ const PRIORITY_TEXT: Record<PriorityTone, string> = {
   neutral: 'text-gray-700',
 };
 
+const TASK_PRIORITY_BADGE: Record<'high' | 'medium' | 'low' | 'none', string> = {
+  high: 'bg-red-100 text-red-700',
+  medium: 'bg-orange-100 text-orange-700',
+  low: 'bg-green-100 text-green-700',
+  none: 'bg-gray-100 text-gray-600',
+};
+
+const TASK_PRIORITY_LABEL: Record<'high' | 'medium' | 'low' | 'none', string> = {
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
+  none: 'Not set',
+};
+
+const TASK_STATE_BADGE: Record<'active' | 'done' | 'delayed', string> = {
+  active: 'bg-blue-100 text-blue-700',
+  done: 'bg-green-100 text-green-700',
+  delayed: 'bg-amber-100 text-amber-700',
+};
+
+const TASK_STATE_LABEL: Record<'active' | 'done' | 'delayed', string> = {
+  active: 'Active',
+  done: 'Done',
+  delayed: 'Delayed',
+};
+
 /**
  * Single task row in the "Linked Tasks" list.
  *
@@ -43,18 +72,39 @@ const PRIORITY_TEXT: Record<PriorityTone, string> = {
  *     keyboard-accessible (Tab + Enter), respects browser print.
  */
 function TaskItem({ task, onClick }: { task: FeatureTaskLite; onClick?: () => void }) {
+  const priority = task.priority ?? 'none';
+  const state = task.state ?? 'active';
+
   return (
     <li
-      className="px-3 py-2.5 bg-white border border-gray-200 rounded-lg flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+      className="bg-white border border-gray-200 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
       onClick={onClick}
     >
-      <span className="text-sm font-medium text-gray-800 truncate">
-        {task.name}
-      </span>
-      <ChevronRightIcon
-        className="size-4 text-gray-400 shrink-0"
-        aria-hidden="true"
-      />
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-gray-800 truncate">{task.name}</div>
+          {task.storyPoints != null && task.storyPoints > 0 && (
+            <div className="text-xs text-gray-500 mt-0.5">{task.storyPoints} SP</div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${TASK_STATE_BADGE[state]}`}
+          >
+            {TASK_STATE_LABEL[state]}
+          </span>
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${TASK_PRIORITY_BADGE[priority]}`}
+          >
+            {TASK_PRIORITY_LABEL[priority]}
+          </span>
+          <ChevronRightIcon
+            className="size-4 text-gray-400 shrink-0"
+            aria-hidden="true"
+          />
+        </div>
+      </div>
     </li>
   );
 }
