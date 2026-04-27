@@ -1,0 +1,45 @@
+name: Super Linter Backend
+
+on:
+  push:
+    branches: [ "development" ]
+    paths:
+      - "MtdrSpring/backend/src/main/java/**"
+      - "java_checks.xml"
+      - ".github/workflows/super-linter-backend.yml"
+  pull_request:
+    branches: [ "development" ]
+    paths:
+      - "MtdrSpring/backend/src/main/java/**"
+      - "java_checks.xml"
+      - ".github/workflows/super-linter-backend.yml"
+  workflow_dispatch:
+
+jobs:
+  lint-backend:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Super-Linter (backend)
+        uses: github/super-linter/slim@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          VALIDATE_ALL_CODEBASE: true
+          FILTER_REGEX_INCLUDE: (MtdrSpring/backend/src/main/java/.*|java_checks\.xml)
+
+          VALIDATE_JAVA: true
+          JAVA_FILE_NAME: java_checks.xml
+
+          VALIDATE_TYPESCRIPT_ES: false
+          VALIDATE_JAVASCRIPT_ES: false
+          VALIDATE_CSS: false
+          VALIDATE_HTML: false
+          VALIDATE_JSON: false
+          VALIDATE_YAML: false

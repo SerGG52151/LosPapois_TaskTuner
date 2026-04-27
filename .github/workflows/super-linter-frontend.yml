@@ -1,0 +1,42 @@
+name: Super Linter Frontend
+
+on:
+  push:
+    branches: [ "development" ]
+    paths:
+      - "MtdrSpring/backend/src/main/frontend/**"
+      - ".github/workflows/super-linter-frontend.yml"
+  pull_request:
+    branches: [ "development" ]
+    paths:
+      - "MtdrSpring/backend/src/main/frontend/**"
+      - ".github/workflows/super-linter-frontend.yml"
+  workflow_dispatch:
+
+jobs:
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Super-Linter (frontend)
+        uses: github/super-linter/slim@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          VALIDATE_ALL_CODEBASE: true
+          FILTER_REGEX_INCLUDE: MtdrSpring/backend/src/main/frontend/.*
+
+          VALIDATE_TYPESCRIPT_ES: true
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_CSS: true
+          VALIDATE_HTML: true
+          VALIDATE_JSON: true
+          VALIDATE_YAML: true
+
+          VALIDATE_JAVA: false
