@@ -757,22 +757,17 @@ public class BotActions {
     private void showFeatureSelectionForSprint(long sprintId) {
         List<FeatureTT> features = featureTTService.getFeaturesBySprint(sprintId);
 
-        var builder = InlineKeyboardMarkup.builder();
-
         if (features.isEmpty()) {
-            builder.keyboardRow(new InlineKeyboardRow(
-                InlineKeyboardButton.builder()
-                    .text("— No feature —")
-                    .callbackData("FEATURE:none")
-                    .build()
-            ));
-            BotHelper.sendMessageToTelegramButtons(
-                chatId,
-                "⚠️ " + BotMessages.NO_FEATURES_FOR_SPRINT.getMessage(),
-                telegramClient, builder.build());
+            taskDrafts.remove(chatId);
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId,
+                "⚠️ This sprint has no features. Create a feature first before adding a task.",
+                telegramClient, null);
+            showMainMenu();
             return;
         }
 
+        var builder = InlineKeyboardMarkup.builder();
         for (FeatureTT f : features) {
             builder.keyboardRow(new InlineKeyboardRow(
                 InlineKeyboardButton.builder()
@@ -781,12 +776,6 @@ public class BotActions {
                     .build()
             ));
         }
-        builder.keyboardRow(new InlineKeyboardRow(
-            InlineKeyboardButton.builder()
-                .text("— No feature —")
-                .callbackData("FEATURE:none")
-                .build()
-        ));
 
         BotHelper.sendMessageToTelegramButtons(
             chatId, BotMessages.SELECT_FEATURE.getMessage(), telegramClient, builder.build());
@@ -810,12 +799,18 @@ public class BotActions {
         }
 
         String featureToken = requestText.substring(8);
-        if (!"none".equals(featureToken)) {
-            try {
-                draft.setFeatureId(Long.parseLong(featureToken));
-            } catch (NumberFormatException e) {
-                draft.setFeatureId(null);
-            }
+        if ("none".equals(featureToken)) {
+            // Feature is required — re-show the selection
+            showFeatureSelectionForSprint(draft.getSprintId());
+            exit = true;
+            return;
+        }
+        try {
+            draft.setFeatureId(Long.parseLong(featureToken));
+        } catch (NumberFormatException e) {
+            showFeatureSelectionForSprint(draft.getSprintId());
+            exit = true;
+            return;
         }
 
         saveTaskFromDraft(draft);
