@@ -1,0 +1,61 @@
+name: Super Linter Frontend
+
+on:
+  push:
+    branches: [ "development" ]
+    paths:
+      - "MtdrSpring/backend/src/main/frontend/**"
+      - ".github/workflows/super-linter-frontend.yml"
+  pull_request:
+    branches: [ "development" ]
+    paths:
+      - "MtdrSpring/backend/src/main/frontend/**"
+      - ".github/workflows/super-linter-frontend.yml"
+  workflow_dispatch:
+
+jobs:
+  lint-frontend:
+    name: Lint Frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: MtdrSpring/backend/src/main/frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: MtdrSpring/backend/src/main/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint TypeScript with project ESLint config
+        run: npx eslint --ext .ts,.tsx src
+
+      - name: Install Stylelint for Tailwind CSS check
+        run: npm install --no-save stylelint
+
+      - name: Lint Tailwind CSS
+        run: npx stylelint "src/**/*.css" --config .stylelintrc.tailwind-ci.json --allow-empty-input
+
+      - name: Run Super-Linter (frontend)
+        uses: github/super-linter/slim@v7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          VALIDATE_ALL_CODEBASE: true
+          FILTER_REGEX_INCLUDE: MtdrSpring/backend/src/main/frontend/.*
+
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_HTML: true
+          VALIDATE_JSON: true
+          VALIDATE_YAML: true
