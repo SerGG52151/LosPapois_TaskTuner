@@ -121,6 +121,9 @@ public class SprintTTService {
      * @return the saved entity with the DB-assigned sprId
      */
     public SprintTT addSprint(SprintTT newSprint) {
+        if (newSprint.getPjId() == 0) {
+            throw new IllegalArgumentException("Sprint must belong to a project (pjId is required).");
+        }
         return sprintTTRepository.save(newSprint);
     }
 

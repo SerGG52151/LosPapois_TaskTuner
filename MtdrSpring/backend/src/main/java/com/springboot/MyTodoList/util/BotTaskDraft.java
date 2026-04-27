@@ -7,6 +7,8 @@ public class BotTaskDraft {
     private Long taskId;
     private long sprintId;
     private Long featureId;
+    private java.time.LocalDate dateStart;
+    private java.time.LocalDate dateEnd;
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -25,4 +27,10 @@ public class BotTaskDraft {
 
     public Long getFeatureId() { return featureId; }
     public void setFeatureId(Long featureId) { this.featureId = featureId; }
+
+    public java.time.LocalDate getDateStart() { return dateStart; }
+    public void setDateStart(java.time.LocalDate dateStart) { this.dateStart = dateStart; }
+
+    public java.time.LocalDate getDateEnd() { return dateEnd; }
+    public void setDateEnd(java.time.LocalDate dateEnd) { this.dateEnd = dateEnd; }
 }

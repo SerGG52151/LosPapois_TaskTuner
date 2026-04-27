@@ -1,0 +1,94 @@
+name: Production CI/CD (OCI)
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  # These mapped from GitHub Secrets
+  DOCKER_REGISTRY: ${{ secrets.OCI_DOCKER_REGISTRY }}             # e.g., iad.ocir.io/mytenancy/tasktuner
+  IMAGE_NAME: todolistapp-springboot                              # Matches your todolistapp-springboot.yaml
+  TODO_PDB_NAME: ${{ secrets.TODO_PDB_NAME }}                     # e.g., tasktuner
+  OCI_REGION: ${{ secrets.OCI_CLI_REGION }}                       # e.g., us-ashburn-1
+  UI_USERNAME: ${{ secrets.UI_USERNAME }}                         
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./MtdrSpring/backend
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Reconstruct Oracle Wallet from Secret
+      run: |
+        echo "${{ secrets.ORACLE_WALLET_BASE64 }}" | base64 -d > Wallet_TaskTuner.zip
+        unzip Wallet_TaskTuner.zip -d .
+
+    - name: Build backend and frontend with Maven
+      run: CI=false ./mvnw clean package
+
+    - name: Log in to OCI Container Registry (OCIR)
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ secrets.OCI_DOCKER_REGISTRY }} # e.g. iad.ocir.io
+        username: ${{ secrets.OCI_REGISTRY_USERNAME }} # Format: <tenancy-namespace>/<username>
+        password: ${{ secrets.OCI_AUTH_TOKEN }}
+
+    - name: Build and Push Docker Image to OCIR
+      uses: docker/build-push-action@v5
+      with:
+        context: ./MtdrSpring/backend
+        file: ./MtdrSpring/backend/Dockerfile
+        push: true
+        tags: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:0.1
+        build-args: |
+          UI_USERNAME=${{ secrets.UI_USERNAME }}
+          UI_PASSWORD=${{ secrets.UI_PASSWORD }}
+          DB_USER=${{ secrets.DB_USER }}
+          DBPASSWORD=${{ secrets.DBPASSWORD }}
+          DB_URL=${{ secrets.DB_URL }}
+          DRIVER_CLASS_NAME=${{ secrets.DRIVER_CLASS_NAME }}
+          DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_NAME=${{ secrets.TELEGRAM_BOT_NAME }}
+
+    # -------------------------------------------------------------
+    # Kubernetes Deployment to Oracle Container Engine (OKE)
+    # (Commented out because deployment is done manually via deploy.sh in the OCI Cloud Console)
+    # -------------------------------------------------------------
+    # - name: Configure Kubectl for OKE
+    #   uses: oracle-actions/configure-kubectl-oke@v1.3.2
+    #   id: configure-kubectl-oke
+    #   with:
+    #     cluster: ${{ secrets.OKE_CLUSTER_OCID }}
+    #   env:
+    #     OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+    #     OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+    #     OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+    #     OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_FILE }}
+    #     OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+
+    # - name: Deploy to OKE using deploy.sh logic
+    #   run: |
+    #     # Emulate your deploy.sh replacements for Kubernetes
+    #     export CURRENTTIME=$(date '+%F_%H-%M-%S')
+    #     sed "s|%DOCKER_REGISTRY%|${DOCKER_REGISTRY}|g" src/main/resources/todolistapp-springboot.yaml > deploy-1.yaml
+    #     sed "s|%TODO_PDB_NAME%|${TODO_PDB_NAME}|g" deploy-1.yaml > deploy-2.yaml
+    #     sed "s|%OCI_REGION%|${OCI_REGION}|g" deploy-2.yaml > deploy-3.yaml
+    #     sed "s|%UI_USERNAME%|${UI_USERNAME}|g" deploy-3.yaml > final-deployment.yaml
+    #     
+    #     echo "Applying deployment to cluster..."
+    #     kubectl apply -f final-deployment.yaml -n mtdrworkshop

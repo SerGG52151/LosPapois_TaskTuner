@@ -85,4 +85,5 @@ export const STORAGE_KEYS = {
   SPRINTS: 'task_tuner_sprints',
   CURRENT_SPRINT: 'task_tuner_current_sprint',
   AUTH_TOKEN: 'task_tuner_auth_token',
+  SIDEBAR_OPEN: 'task_tuner_sidebar_open',
 } as const;

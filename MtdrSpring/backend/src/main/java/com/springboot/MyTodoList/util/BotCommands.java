@@ -14,7 +14,10 @@ public enum BotCommands {
 	MARK_UNDO("/undo"),
 	EDIT_TASK("/edittask"),
 	LLM_REQ("/llm"),
-	ADD_FEATURE("/addfeature");
+	ASK_COMMAND("/ask"),
+	ADD_FEATURE("/addfeature"),
+	EDIT_FEATURE("/editfeature"),
+	AI_CREATE("/aicreate");
 
 	private final String command;
 

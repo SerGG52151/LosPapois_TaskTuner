@@ -21,7 +21,7 @@ function getInitials(name: string): string {
 
 export default function MemberCard({ name, role, email, telegramId, onEdit, onDelete }: MemberCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-md shadow-brand/10 p-5 hover:shadow-lg hover:shadow-brand/20 transition-shadow">
       <div className="flex items-start justify-between mb-4">
         <div className="bg-brand text-white rounded-full h-12 w-12 flex items-center justify-center font-bold text-sm">
           {getInitials(name)}
