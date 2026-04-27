@@ -218,9 +218,10 @@ export default function StatisticsPage() {
         setSprints(sortedSprints);
         setSeriesBySprint(computedSeries);
 
-        const defaultMemberIds = projectMembers.map(m => m.id);
-        setPendingMemberIds(defaultMemberIds);
-        setAppliedMemberIds(defaultMemberIds);
+        // Start with no members selected so the user explicitly chooses
+        // who to graph before applying filters.
+        setPendingMemberIds([]);
+        setAppliedMemberIds([]);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -259,6 +260,47 @@ export default function StatisticsPage() {
 
   const yTicks = useMemo(() => buildYAxisTicks(maxValue), [maxValue]);
   const axisMax = yTicks[yTicks.length - 1] ?? maxValue;
+
+  const {
+    barWidthPx,
+    barGapPx,
+    sprintGroupWidthPx,
+    chartMinWidthPx,
+  } = useMemo(() => {
+    const developerCount = Math.max(appliedMemberIds.length, 1);
+    const sprintCount = Math.max(chartRows.length, 1);
+
+    const computedBarWidth = developerCount <= 3
+      ? 18
+      : developerCount <= 6
+        ? 14
+        : developerCount <= 10
+          ? 10
+          : 8;
+
+    const computedBarGap = developerCount <= 3
+      ? 10
+      : developerCount <= 6
+        ? 8
+        : developerCount <= 10
+          ? 6
+          : 4;
+
+    const groupInnerWidth =
+      developerCount * computedBarWidth + (developerCount - 1) * computedBarGap;
+    const computedGroupWidth = Math.max(120, groupInnerWidth + 24);
+    const computedChartMinWidth = Math.max(
+      760,
+      64 + sprintCount * (computedGroupWidth + 16)
+    );
+
+    return {
+      barWidthPx: computedBarWidth,
+      barGapPx: computedBarGap,
+      sprintGroupWidthPx: computedGroupWidth,
+      chartMinWidthPx: computedChartMinWidth,
+    };
+  }, [appliedMemberIds.length, chartRows.length]);
 
   const handleApply = () => {
     setAppliedMemberIds(pendingMemberIds);
@@ -437,7 +479,7 @@ export default function StatisticsPage() {
           ) : (
             <div className="space-y-5">
               <div className="border border-gray-100 rounded-xl p-4 bg-gradient-to-b from-gray-50 to-white overflow-x-auto">
-                <div className="min-w-[760px]">
+                <div style={{ minWidth: `${chartMinWidthPx}px` }}>
                   <div className="grid grid-cols-[64px_1fr] gap-3 items-stretch">
                     <div className="relative h-80">
                       {yTicks.map((tick, idx) => {
@@ -468,17 +510,26 @@ export default function StatisticsPage() {
                         );
                       })}
 
-                      <div className="h-full flex items-end justify-around gap-4 pb-2">
+                      <div className="h-full flex items-end justify-start gap-4 pb-2">
                         {chartRows.map(row => (
                           <div
                             key={row.sprintId}
-                            className="flex-1 min-w-[110px] h-full flex items-end justify-center gap-2"
+                            className="flex-none h-full flex items-end justify-center"
+                            style={{
+                              width: `${sprintGroupWidthPx}px`,
+                              minWidth: `${sprintGroupWidthPx}px`,
+                              gap: `${barGapPx}px`,
+                            }}
                           >
                             {row.values.map((bar, index) => {
                               const pct = axisMax > 0 ? (bar.value / axisMax) * 100 : 0;
                               const barHeight = bar.value === 0 ? 0 : Math.max(pct, 2);
                               return (
-                                <div key={bar.memberId} className="w-8 h-full flex items-end">
+                                <div
+                                  key={bar.memberId}
+                                  className="h-full flex items-end"
+                                  style={{ width: `${barWidthPx}px` }}
+                                >
                                   <div
                                     className="w-full rounded-t-md transition-[height] duration-500"
                                     style={{
@@ -499,18 +550,44 @@ export default function StatisticsPage() {
                   <div className="grid grid-cols-[64px_1fr] gap-3 mt-3">
                     <div aria-hidden="true" />
                     <div className="border-l border-transparent pl-3">
-                      <div className="flex justify-around gap-4 mb-2">
+                      <div className="flex justify-start gap-4 mb-2">
                         {chartRows.map(row => (
-                          <div key={row.sprintId} className="flex-1 min-w-[110px] text-center">
-                            <span className="inline-block text-[10px] text-gray-500 leading-none">
-                              {row.values.map(v => v.value).join(' / ')}
-                            </span>
+                          <div
+                            key={row.sprintId}
+                            className="flex-none"
+                            style={{
+                              width: `${sprintGroupWidthPx}px`,
+                              minWidth: `${sprintGroupWidthPx}px`,
+                            }}
+                          >
+                            <div className="flex flex-wrap justify-center gap-1.5">
+                              {row.values.map((v, idx) => (
+                                <span
+                                  key={v.memberId}
+                                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-medium text-gray-700"
+                                >
+                                  <span
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: BAR_COLORS[idx % BAR_COLORS.length] }}
+                                    aria-hidden="true"
+                                  />
+                                  {v.value}
+                                </span>
+                              ))}
+                            </div>
                           </div>
                         ))}
                       </div>
-                      <div className="flex justify-around gap-4">
+                      <div className="flex justify-start gap-4">
                         {chartRows.map(row => (
-                          <div key={row.sprintId} className="flex-1 min-w-[110px] text-center">
+                          <div
+                            key={row.sprintId}
+                            className="flex-none text-center"
+                            style={{
+                              width: `${sprintGroupWidthPx}px`,
+                              minWidth: `${sprintGroupWidthPx}px`,
+                            }}
+                          >
                             <span className="inline-block text-xs font-medium text-gray-600 leading-tight">
                               {row.sprintName}
                             </span>
