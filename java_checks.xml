@@ -8,7 +8,7 @@
       <property name="allowClassImports" value="true"/>
       <property name="allowStaticMemberImports" value="true"/>
     </module>
-    <module name="ConstantName">[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$'. [Consta
+    <module name="ConstantName">
       <property name="format" value="^([A-Z][A-Z0-9]*(_[A-Z0-9]+)*|[a-z][a-zA-Z0-9]*)$"/>
     </module>
     <module name="EmptyBlock"/>
