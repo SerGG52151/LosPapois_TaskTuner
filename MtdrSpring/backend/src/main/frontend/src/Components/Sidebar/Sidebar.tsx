@@ -8,6 +8,8 @@ import {
 import SidebarHeader from './SidebarHeader';
 import SidebarItem from './SidebarItem';
 import SidebarProjectGroup from './SidebarProjectGroup';
+import AddProjectModal from './AddProjectModal';
+import type { NewProjectData } from './AddProjectModal';
 import { AddSprintModal } from '../Sprint';
 import type { NewSprintData } from '../Sprint';
 import {
@@ -20,6 +22,17 @@ import {
 interface ProjectDTO {
   pjId: number;
   namePj: string;
+  dateStartPj?: string | null;
+  dateEndSetPj?: string | null;
+  dateEndRealPj?: string | null;
+}
+
+interface SessionUser {
+  userId: number;
+  nameUser?: string;
+  mail?: string;
+  role?: string;
+  idTelegram?: string;
 }
 
 // Visual fallback while the backend / proxy is offline. Lets the new sidebar
@@ -128,11 +141,83 @@ function Sidebar({ isOpen }: SidebarProps) {
     [addSprintFor]
   );
 
-  // Visual-only stub for "Add Project" — wire to a modal + POST when
-  // the project-creation flow is designed.
-  const handleAddProject = useCallback(() => {
-    console.log('[Sidebar] add project clicked');
+  const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
+  const [addProjectSubmitting, setAddProjectSubmitting] = useState(false);
+  const [addProjectError, setAddProjectError] = useState<string | null>(null);
+
+  const handleOpenAddProject = useCallback(() => {
+    setAddProjectError(null);
+    setIsAddProjectOpen(true);
   }, []);
+
+  const handleCloseAddProject = useCallback(() => {
+    if (addProjectSubmitting) return;
+    setAddProjectError(null);
+    setIsAddProjectOpen(false);
+  }, [addProjectSubmitting]);
+
+  const handleCreateProject = useCallback(
+    async (data: NewProjectData) => {
+      setAddProjectSubmitting(true);
+      setAddProjectError(null);
+
+      try {
+        const currentUser = getFromStorage<SessionUser>(STORAGE_KEYS.USER);
+        if (!currentUser?.userId) {
+          throw new Error('No authenticated user found in session.');
+        }
+
+        const projectPayload = {
+          namePj: data.name,
+          dateStartPj: data.startDate,
+          dateEndSetPj: data.endDate,
+          dateEndRealPj: null,
+        };
+
+        const projectRes = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(projectPayload),
+        });
+
+        if (!projectRes.ok) {
+          throw new Error(`POST /api/projects failed: ${projectRes.status}`);
+        }
+
+        const createdProject = (await projectRes.json()) as ProjectDTO;
+        if (!createdProject?.pjId) {
+          throw new Error('Project was created but returned without pjId.');
+        }
+
+        const membershipRes = await fetch(
+          `/api/project-memberships?pjId=${createdProject.pjId}&userId=${currentUser.userId}`,
+          { method: 'POST' }
+        );
+
+        if (!membershipRes.ok) {
+          throw new Error(
+            `POST /api/project-memberships failed: ${membershipRes.status}`
+          );
+        }
+
+        setProjects(prev => {
+          const updated = [...prev, createdProject].sort((a, b) =>
+            a.namePj.localeCompare(b.namePj)
+          );
+          saveToStorage(STORAGE_KEYS.PROJECTS, updated);
+          return updated;
+        });
+
+        setIsAddProjectOpen(false);
+      } catch (err) {
+        console.error('[Sidebar] create project failed', err);
+        setAddProjectError('Could not create project. Please check the inputs and try again.');
+      } finally {
+        setAddProjectSubmitting(false);
+      }
+    },
+    []
+  );
 
   return (
     <aside
@@ -151,6 +236,18 @@ function Sidebar({ isOpen }: SidebarProps) {
         <SidebarHeader />
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Projects">
+          {/* Primary CTA placed at the top for first-glance discoverability. */}
+          <button
+            type="button"
+            onClick={handleOpenAddProject}
+            className="flex items-center justify-center gap-2 w-full mb-3 px-3 py-2.5 rounded-lg
+                       text-sm font-semibold text-white bg-brand hover:bg-brand-dark
+                       transition-colors text-left"
+          >
+            <PlusIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
+            <span className="truncate">Add Project</span>
+          </button>
+
           {projects.length === 0 ? (
             <p className="px-3 py-2 text-sm text-gray-400">No projects yet</p>
           ) : (
@@ -167,20 +264,6 @@ function Sidebar({ isOpen }: SidebarProps) {
               />
             ))
           )}
-
-          {/* CTA at the end of the projects list — mirrors the "Add Sprint" */}
-          {/* pattern inside each project so the user learns one convention: */}
-          {/* "+ Add X" always closes its respective list. */}
-          <button
-            type="button"
-            onClick={handleAddProject}
-            className="flex items-center gap-2 w-full mt-2 px-3 py-2 rounded-lg
-                       text-sm font-medium text-brand-dark hover:bg-brand-lighter
-                       transition-colors text-left"
-          >
-            <PlusIcon className="h-5 w-5 shrink-0" aria-hidden="true" />
-            <span className="truncate">Add Project</span>
-          </button>
         </nav>
 
         <div className="px-3 py-3 border-t border-gray-100 space-y-1">
@@ -197,6 +280,14 @@ function Sidebar({ isOpen }: SidebarProps) {
         isOpen={addSprintFor !== null}
         onClose={closeAddSprint}
         onCreate={handleCreateSprint}
+      />
+
+      <AddProjectModal
+        isOpen={isAddProjectOpen}
+        onClose={handleCloseAddProject}
+        onCreate={handleCreateProject}
+        submitting={addProjectSubmitting}
+        error={addProjectError}
       />
     </aside>
   );

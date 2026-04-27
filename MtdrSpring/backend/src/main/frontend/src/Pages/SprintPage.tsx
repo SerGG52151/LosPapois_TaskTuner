@@ -9,21 +9,26 @@ import {
 } from '@heroicons/react/24/outline';
 import { KpiCard } from '../Components/Team'; // shared visual primitive — promote to /Common if it spreads further
 import {
+  DeveloperTaskBoard,
   FeatureDetailPanel,
   FeatureFilters,
   FeatureListItem,
 } from '../Components/Sprint';
 import type {
+  DeveloperBoardKpis,
+  DeveloperBoardMember,
+  DeveloperBoardTask,
   FeatureDetailData,
   FilterKey,
   FilterValues,
   PriorityTone,
+  TaskBoardMode,
 } from '../Components/Sprint';
 import type { StatusTone } from '../Components/Sprint';
 import TaskDetailModal from '../Components/Common/TaskDetailModal';
 import type { TaskDetailData } from '../Components/Common/TaskDetailModal';
 import PageLoading from '../Components/Common/PageLoading';
-import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
+import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data — visual-only until the sprint endpoints are wired.
@@ -200,6 +205,20 @@ function mapTaskPriority(p: string | null | undefined): 'high' | 'medium' | 'low
   }
 }
 
+function normalizeTaskState(s: string | null | undefined): 'active' | 'done' | 'delayed' {
+  const state = (s ?? '').toLowerCase();
+  if (state === 'done') return 'done';
+  if (state === 'delayed') return 'delayed';
+  return 'active';
+}
+
+function displayTaskState(s: string | null | undefined): string {
+  const state = normalizeTaskState(s);
+  if (state === 'done') return 'Done';
+  if (state === 'delayed') return 'Delayed';
+  return 'Active';
+}
+
 /** Derive a status label + tone from task completion progress. */
 function statusFromProgress(progress: number): { label: string; tone: StatusTone } {
   if (progress >= 100) return { label: 'Completed', tone: 'success' };
@@ -252,6 +271,18 @@ interface MockFeature {
   progress: number;
 }
 
+type SprintContentView = 'features' | 'developers';
+
+interface SprintUiPreferences {
+  contentView: SprintContentView;
+  developerTaskMode: TaskBoardMode;
+  selectedFeatureId: number | null;
+  selectedDeveloperKey: string | null;
+  filters: FilterValues;
+}
+
+const sprintUiPrefsKey = (sid: number) => `${STORAGE_KEYS.CURRENT_SPRINT}_ui_${sid}`;
+
 // MockFeature stays as the page's internal display shape — the enrich step
 // builds objects with this same structure so the existing list/detail
 // components don't need any changes. The MOCK_FEATURES seed data was
@@ -273,6 +304,29 @@ function Sparkline() {
         strokeWidth="2"
       />
     </svg>
+  );
+}
+
+/** Linear progress bar used by sprint progress KPI card. */
+function ProgressBar({ value }: { value: number }) {
+  const safe = Math.max(0, Math.min(value, 100));
+
+  return (
+    <div className="space-y-1.5">
+      <div
+        className="w-full h-2.5 rounded-full bg-green-50 border border-green-100 overflow-hidden"
+        role="progressbar"
+        aria-valuenow={safe}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 transition-[width] duration-500"
+          style={{ width: `${safe}%` }}
+        />
+      </div>
+      <div className="text-[11px] text-green-700 font-medium">Progress tracked at {safe}%</div>
+    </div>
   );
 }
 
@@ -318,6 +372,7 @@ export default function SprintPage() {
     sprintId != null && sprintId >= 0
   );
   const [usersLoading, setUsersLoading] = useState(true);
+  const [contentView, setContentView] = useState<SprintContentView>('features');
 
   useEffect(() => {
     if (sprintId == null || sprintId < 0) {
@@ -509,16 +564,155 @@ export default function SprintPage() {
 
   // Selection is nullable so we can render an empty state when no features.
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
+  const [selectedDeveloperKey, setSelectedDeveloperKey] = useState<string | null>(null);
+  const [developerTaskMode, setDeveloperTaskMode] = useState<TaskBoardMode>('list');
 
   const [selectedTaskForModal, setSelectedTaskForModal] = useState<TaskDetailData | null>(null);
 
-  // Drop the previous sprint's selection when navigating between sprints —
-  // otherwise a stale feature ID could briefly look "selected" before the
-  // visibleFeatures fallback kicks in.
+  // Load persisted UI selections for this sprint (view mode, filters, etc.).
+  // If nothing was saved yet, fall back to sensible defaults.
   useEffect(() => {
-    setSelectedFeatureId(null);
     setSelectedTaskForModal(null);
+
+    if (sprintId == null || sprintId < 0) {
+      setContentView('features');
+      setDeveloperTaskMode('list');
+      setSelectedFeatureId(null);
+      setSelectedDeveloperKey(null);
+      setFilters({});
+      return;
+    }
+
+    const prefs = getFromStorage<SprintUiPreferences>(sprintUiPrefsKey(sprintId));
+    setContentView(prefs?.contentView === 'developers' ? 'developers' : 'features');
+    setDeveloperTaskMode(prefs?.developerTaskMode === 'kanban' ? 'kanban' : 'list');
+    setSelectedFeatureId(typeof prefs?.selectedFeatureId === 'number' ? prefs.selectedFeatureId : null);
+    setSelectedDeveloperKey(typeof prefs?.selectedDeveloperKey === 'string' ? prefs.selectedDeveloperKey : null);
+    setFilters(prefs?.filters ?? {});
   }, [sprintId]);
+
+  // Persist all interactive selections per sprint so users can leave and
+  // return without losing their preferred view/mode/filter state.
+  useEffect(() => {
+    if (sprintId == null || sprintId < 0) return;
+
+    const prefs: SprintUiPreferences = {
+      contentView,
+      developerTaskMode,
+      selectedFeatureId,
+      selectedDeveloperKey,
+      filters,
+    };
+    saveToStorage(sprintUiPrefsKey(sprintId), prefs);
+  }, [
+    sprintId,
+    contentView,
+    developerTaskMode,
+    selectedFeatureId,
+    selectedDeveloperKey,
+    filters,
+  ]);
+
+  const developerBuckets = useMemo(() => {
+    const grouped = new Map<string, SprintTaskJoined[]>();
+    sprintTasks.forEach(task => {
+      const key = task.userId != null ? String(task.userId) : 'unassigned';
+      const existing = grouped.get(key) ?? [];
+      existing.push(task);
+      grouped.set(key, existing);
+    });
+
+    const rows: Array<DeveloperBoardMember & { tasks: SprintTaskJoined[] }> =
+      Array.from(grouped.entries()).map(([key, tasks]) => {
+        const name = key === 'unassigned'
+          ? 'Unassigned'
+          : usersById.get(Number(key)) ?? `User #${key}`;
+        const subtitle = `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
+        return { key, name, subtitle, tasks };
+      });
+
+    return rows.sort((a, b) => {
+      if (a.key === 'unassigned') return 1;
+      if (b.key === 'unassigned') return -1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [sprintTasks, usersById]);
+
+  useEffect(() => {
+    if (developerBuckets.length === 0) {
+      setSelectedDeveloperKey(null);
+      return;
+    }
+    const exists = selectedDeveloperKey
+      ? developerBuckets.some(d => d.key === selectedDeveloperKey)
+      : false;
+    if (!exists) setSelectedDeveloperKey(developerBuckets[0].key);
+  }, [developerBuckets, selectedDeveloperKey]);
+
+  const selectedDeveloper =
+    developerBuckets.find(d => d.key === selectedDeveloperKey) ?? null;
+
+  const selectedDeveloperKpis = useMemo<DeveloperBoardKpis>(() => {
+    if (!selectedDeveloper) {
+      return {
+        tasksCompleted: 0,
+        cycleTime: '—',
+        assignedTasks: 0,
+        totalStoryPoints: 0,
+        progress: '—',
+      };
+    }
+
+    const tasks = selectedDeveloper.tasks;
+    if (tasks.length === 0) {
+      return {
+        tasksCompleted: 0,
+        cycleTime: '—',
+        assignedTasks: 0,
+        totalStoryPoints: 0,
+        progress: '—',
+      };
+    }
+
+    const completed = tasks.filter(t => normalizeTaskState(t.stateTask) === 'done');
+    const withDates = completed.filter(t => t.dateStartTask && t.dateEndRealTask);
+    const dayMs = 1000 * 60 * 60 * 24;
+    const avgCycleDays = withDates.length === 0
+      ? 0
+      : withDates.reduce((sum, t) => {
+          const start = new Date(t.dateStartTask!).getTime();
+          const end = new Date(t.dateEndRealTask!).getTime();
+          return sum + Math.max(0, (end - start) / dayMs);
+        }, 0) / withDates.length;
+
+    return {
+      tasksCompleted: completed.length,
+      cycleTime: `${avgCycleDays.toFixed(1)} days`,
+      assignedTasks: tasks.length,
+      totalStoryPoints: tasks.reduce((sum, t) => sum + (t.storyPoints ?? 0), 0),
+      progress: `${Math.round((completed.length / tasks.length) * 100)}%`,
+    };
+  }, [selectedDeveloper]);
+
+  const featureNameById = useMemo(
+    () => new Map(rawFeatures.map(f => [f.featureId, f.nameFeature])),
+    [rawFeatures]
+  );
+
+  const selectedDeveloperTasks = useMemo<DeveloperBoardTask[]>(() => {
+    if (!selectedDeveloper) return [];
+
+    return selectedDeveloper.tasks
+      .map(task => ({
+        id: task.taskId,
+        name: task.nameTask ?? `Task #${task.taskId}`,
+        featureName: task.featureId != null ? featureNameById.get(task.featureId) : undefined,
+        storyPoints: task.storyPoints,
+        priority: mapTaskPriority(task.priority),
+        state: normalizeTaskState(task.stateTask),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedDeveloper, featureNameById]);
 
   // Keep selection valid as the list changes — auto-pick first visible
   // when current selection drops out of the filtered set.
@@ -545,6 +739,9 @@ export default function SprintPage() {
             id: t.taskId,
             name: t.nameTask ?? `Task #${t.taskId}`,
             description: t.infoTask,
+            storyPoints: t.storyPoints,
+            priority: mapTaskPriority(t.priority),
+            state: normalizeTaskState(t.stateTask),
           })),
       }
     : null;
@@ -562,7 +759,7 @@ export default function SprintPage() {
       storyPoints: taskDTO.storyPoints ?? null,
       priority: mapTaskPriority(taskDTO.priority),
       developerName: devName,
-      state: taskDTO.stateTask || 'Active',
+      state: displayTaskState(taskDTO.stateTask),
     });
   };
 
@@ -614,7 +811,9 @@ export default function SprintPage() {
             value={`${sprint.kpis.progress}%`}
             icon={ArrowTrendingUpIcon}
             tone="success"
-          />
+          >
+            <ProgressBar value={sprint.kpis.progress} />
+          </KpiCard>
 
           <KpiCard
             label="Carryover Rate"
@@ -659,59 +858,104 @@ export default function SprintPage() {
             className="flex items-center gap-3 text-xl font-bold text-gray-800"
           >
             <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
-            Sprint Features
+            Sprint Status
           </h2>
 
-          <FeatureFilters
-            developers={filterOptions.developers}
-            statuses={filterOptions.statuses}
-            priorities={filterOptions.priorities}
-            storyPoints={filterOptions.storyPoints}
-            values={filters}
-            onChange={handleFilterChange}
-          />
-
-          <div className="border-t border-gray-100 pt-5 grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
-            {/* Left: features list */}
-            <div>
-              <h3 className="text-base font-semibold text-gray-800 mb-3">
-                Features ({visibleFeatures.length})
-              </h3>
-              {visibleFeatures.length === 0 ? (
-                <p className="text-sm text-gray-400">
-                  {displayFeatures.length === 0
-                    ? 'This sprint has no features yet.'
-                    : 'No features match the current filters.'}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {visibleFeatures.map(f => (
-                    <FeatureListItem
-                      key={f.id}
-                      name={f.name}
-                      developer={f.developer}
-                      storyPoints={f.storyPoints}
-                      completedTasks={f.completedTasks}
-                      totalTasks={f.totalTasks}
-                      statusLabel={f.statusLabel}
-                      statusTone={f.statusTone}
-                      selected={selectedFeature?.id === f.id}
-                      onSelect={() => setSelectedFeatureId(f.id)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Right: feature detail (only when something is selected). */}
-            {detail ? (
-              <FeatureDetailPanel feature={detail} onTaskClick={handleTaskClick} />
-            ) : (
-              <p className="text-sm text-gray-400 self-center text-center">
-                Select a feature to view details.
-              </p>
-            )}
+          <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setContentView('features')}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                contentView === 'features'
+                  ? 'bg-brand text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Feature View
+            </button>
+            <button
+              type="button"
+              onClick={() => setContentView('developers')}
+              className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                contentView === 'developers'
+                  ? 'bg-brand text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              Task View
+            </button>
           </div>
+
+          {contentView === 'features' ? (
+            <>
+              <FeatureFilters
+                developers={filterOptions.developers}
+                statuses={filterOptions.statuses}
+                priorities={filterOptions.priorities}
+                storyPoints={filterOptions.storyPoints}
+                values={filters}
+                onChange={handleFilterChange}
+              />
+
+              <div className="border-t border-gray-100 pt-5 grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-6">
+                {/* Left: features list */}
+                <div>
+                  <h3 className="text-base font-semibold text-gray-800 mb-3">
+                    Features ({visibleFeatures.length})
+                  </h3>
+                  {visibleFeatures.length === 0 ? (
+                    <p className="text-sm text-gray-400">
+                      {displayFeatures.length === 0
+                        ? 'This sprint has no features yet.'
+                        : 'No features match the current filters.'}
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {visibleFeatures.map(f => (
+                        <FeatureListItem
+                          key={f.id}
+                          name={f.name}
+                          developer={f.developer}
+                          storyPoints={f.storyPoints}
+                          completedTasks={f.completedTasks}
+                          totalTasks={f.totalTasks}
+                          statusLabel={f.statusLabel}
+                          statusTone={f.statusTone}
+                          selected={selectedFeature?.id === f.id}
+                          onSelect={() => setSelectedFeatureId(f.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: feature detail (only when something is selected). */}
+                {detail ? (
+                  <FeatureDetailPanel feature={detail} onTaskClick={handleTaskClick} />
+                ) : (
+                  <p className="text-sm text-gray-400 self-center text-center">
+                    Select a feature to view details.
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <DeveloperTaskBoard
+              developers={developerBuckets.map(({ key, name, subtitle }): DeveloperBoardMember => ({
+                key,
+                name,
+                subtitle,
+              }))}
+              selectedDeveloperKey={selectedDeveloperKey}
+              onSelectDeveloper={setSelectedDeveloperKey}
+              selectedDeveloperName={selectedDeveloper?.name}
+              kpis={selectedDeveloperKpis}
+              tasks={selectedDeveloperTasks}
+              mode={developerTaskMode}
+              onModeChange={setDeveloperTaskMode}
+              onTaskClick={handleTaskClick}
+            />
+          )}
         </section>
       </div>
       )}

@@ -22,6 +22,7 @@ export interface MemberDetailMember {
 export interface MemberDetailKpis {
   tasksCompleted: number;
   cycleTime: string;
+  assignedTasks: number;
   features: number;
   progress: string;
 }
@@ -209,9 +210,10 @@ function MemberDetailPanel({
       <h4 className="text-base font-semibold text-gray-800 mb-3">
         Project Member KPIs
       </h4>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <MiniKpi label="Completed Tasks" value={kpis.tasksCompleted} />
         <MiniKpi label="Average Cycle Time" value={kpis.cycleTime} />
+        <MiniKpi label="Assigned Tasks" value={kpis.assignedTasks} />
         <MiniKpi label="Assigned Features" value={kpis.features} />
         <MiniKpi label="Current Progress" value={kpis.progress} />
       </div>
