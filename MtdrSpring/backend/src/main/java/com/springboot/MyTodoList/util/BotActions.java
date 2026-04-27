@@ -534,8 +534,9 @@ public class BotActions {
             int sp = Integer.parseInt(requestText.trim());
             BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
             draft.setStoryPoints(sp);
-            setCurrentState(BotConversationState.WAITING_NEW_ITEM_DATE_START);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_ITEM_DATE_START.getMessage(), telegramClient, null);
+            // Dates come from the selected sprint — skip date input steps
+            setCurrentState(BotConversationState.WAITING_NEW_ITEM_PRIORITY);
+            showPriorityButtons();
         } catch (NumberFormatException e) {
             BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_STORY_POINTS.getMessage(), telegramClient, null);
         }
