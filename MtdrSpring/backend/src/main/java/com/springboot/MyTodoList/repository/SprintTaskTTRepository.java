@@ -49,6 +49,16 @@ public interface SprintTaskTTRepository extends JpaRepository<SprintTaskTT, Spri
     List<SprintTaskTT> findByIdTaskId(long taskId);
 
     /*
+     * Deletes all sprint-task link rows for a given task.
+     *
+     * Generated SQL:
+     *   DELETE FROM sprint_task_tt WHERE task_id = ?
+     *
+     * Used when a task is removed as part of member cleanup.
+     */
+    long deleteByIdTaskId(long taskId);
+
+    /*
      * All tasks in a sprint filtered by their workflow state.
      *
      * Generated SQL:
