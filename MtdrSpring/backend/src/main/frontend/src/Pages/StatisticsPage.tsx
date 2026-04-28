@@ -4,14 +4,18 @@ import {
   ArrowTrendingUpIcon,
   ChevronDownIcon,
   ChartBarIcon,
+  CheckBadgeIcon,
+  LockClosedIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import PageLoading from '../Components/Common/PageLoading';
-import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
+import CloseProjectModal from '../Components/Common/CloseProjectModal';
+import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface ProjectDTO {
   pjId: number;
   namePj: string;
+  dateEndRealPj?: string | null;
 }
 
 interface MembershipDTO {
@@ -99,6 +103,60 @@ export default function StatisticsPage() {
       : undefined;
     return match?.namePj ?? projects[0]?.namePj ?? 'Project';
   }, [projectId]);
+
+  // Project lifecycle state — driven by dateEndRealPj. Seeded from cache so
+  // the badge can paint immediately, then refreshed from /api/projects.
+  const [closedDate, setClosedDate] = useState<string | null>(() => {
+    const projects = getFromStorage<ProjectDTO[]>(STORAGE_KEYS.PROJECTS) ?? [];
+    const match = projectId != null
+      ? projects.find(p => p.pjId === projectId)
+      : undefined;
+    return match?.dateEndRealPj ?? null;
+  });
+  const isProjectClosed = closedDate != null;
+  const [closeModalOpen, setCloseModalOpen] = useState<boolean>(false);
+
+  // Re-fetch the project list on mount to make sure the close-state badge
+  // reflects whatever state the backend has, not just what's in cache.
+  useEffect(() => {
+    if (projectId == null) return;
+    let cancelled = false;
+    fetch('/api/projects')
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: ProjectDTO[] | null) => {
+        if (cancelled || !data) return;
+        saveToStorage(STORAGE_KEYS.PROJECTS, data);
+        const match = data.find(p => p.pjId === projectId);
+        setClosedDate(match?.dateEndRealPj ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  // After a successful close, refresh local state + cache so the badge
+  // flips immediately without a manual reload.
+  const handleProjectClosed = () => {
+    const today = new Date().toISOString();
+    setClosedDate(today);
+    const projects = getFromStorage<ProjectDTO[]>(STORAGE_KEYS.PROJECTS) ?? [];
+    const next = projects.map(p =>
+      p.pjId === projectId ? { ...p, dateEndRealPj: today } : p
+    );
+    saveToStorage(STORAGE_KEYS.PROJECTS, next);
+  };
+
+  const formattedClosedDate = useMemo(() => {
+    if (!closedDate) return null;
+    const d = new Date(closedDate);
+    if (Number.isNaN(d.getTime())) return closedDate;
+    return d.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, [closedDate]);
 
   const [members, setMembers] = useState<MemberOption[]>([]);
   const [sprints, setSprints] = useState<SprintDTO[]>([]);
@@ -357,6 +415,69 @@ export default function StatisticsPage() {
             Compare member performance by sprint with configurable chart metrics.
           </p>
         </header>
+
+        {/* Project lifecycle controls — surfaced here so a manager can wrap
+            up the project right after reviewing its final metrics. */}
+        <section
+          className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm shadow-gray-200/60
+                     flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          aria-labelledby="project-status-heading"
+        >
+          <div className="flex items-start gap-3">
+            <span
+              className={`flex items-center justify-center h-10 w-10 rounded-full shrink-0 ${
+                isProjectClosed ? 'bg-gray-100' : 'bg-brand-lighter'
+              }`}
+              aria-hidden="true"
+            >
+              {isProjectClosed ? (
+                <LockClosedIcon className="h-5 w-5 text-gray-500" />
+              ) : (
+                <CheckBadgeIcon className="h-5 w-5 text-brand-dark" />
+              )}
+            </span>
+            <div className="min-w-0">
+              <h2
+                id="project-status-heading"
+                className="text-base font-bold text-gray-900"
+              >
+                Project Status
+              </h2>
+              {isProjectClosed ? (
+                <p className="text-sm text-gray-500 mt-0.5">
+                  This project was finalized
+                  {formattedClosedDate ? ` on ${formattedClosedDate}` : ''}. Its
+                  data remains available for historical reporting.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500 mt-0.5">
+                  This project is currently active. Finalize it once all sprints
+                  are complete to mark its end date.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            {isProjectClosed ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-600">
+                <LockClosedIcon className="h-4 w-4" aria-hidden="true" />
+                Closed
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setCloseModalOpen(true)}
+                className="inline-flex items-center gap-2 rounded-xl bg-brand text-white px-4 py-2 text-sm font-semibold
+                           hover:bg-brand-dark transition-colors
+                           focus:outline-2 focus:outline-brand-dark"
+              >
+                <CheckBadgeIcon className="h-5 w-5" aria-hidden="true" />
+                Finalize Project
+              </button>
+            )}
+          </div>
+        </section>
 
         <section
           className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-sm shadow-gray-200/60"
@@ -618,6 +739,14 @@ export default function StatisticsPage() {
           )}
         </section>
       </div>
+
+      <CloseProjectModal
+        isOpen={closeModalOpen}
+        projectId={projectId ?? null}
+        projectName={projectName}
+        onClose={() => setCloseModalOpen(false)}
+        onClosed={handleProjectClosed}
+      />
     </div>
   );
 }
