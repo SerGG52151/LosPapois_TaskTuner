@@ -2,6 +2,7 @@
     "name": "todolistapp-react",
     "version": "0.1.0",
     "private": true,
+    "homepage": "/",
     "dependencies": {
         "@emotion/react": "^11.9.0",
         "@emotion/styled": "^11.8.1",
@@ -28,7 +29,6 @@
     "browserslist": [
         "last 5 versions"
     ],
-    "homepage": ".",
     "devDependencies": {
         "autoprefixer": "^10.4.27",
         "postcss": "^8.5.9",
