@@ -7,6 +7,7 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import PageLoading from '../Components/Common/PageLoading';
+import CycleTimeScatterPlot from '../Components/Charts/CycleTimeScatterPlot';
 import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface ProjectDTO {
@@ -617,6 +618,8 @@ export default function StatisticsPage() {
             </div>
           )}
         </section>
+
+        <CycleTimeScatterPlot projectId={projectId} />
       </div>
     </div>
   );
