@@ -22,6 +22,12 @@ export type {
   NewTeamMemberData,
 } from './AddTeamMemberModal';
 
+export { default as AddOrSelectTeamMemberModal } from './AddOrSelectTeamMemberModal';
+export type {
+  AddOrSelectTeamMemberModalProps,
+  ExistingUser,
+} from './AddOrSelectTeamMemberModal';
+
 export { default as ConfirmMemberDeleteModal } from './ConfirmMemberDeleteModal';
 export type {
   ConfirmMemberDeleteModalProps,
