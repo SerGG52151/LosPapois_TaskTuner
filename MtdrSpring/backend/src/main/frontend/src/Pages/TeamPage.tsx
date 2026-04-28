@@ -14,11 +14,13 @@ import {
   MemberDetailPanel,
   MemberListItem,
 } from '../Components/Team';
+import AddOrSelectTeamMemberModal from '../Components/Team/AddOrSelectTeamMemberModal';
 import type {
   NewTeamMemberData,
   AvatarTone,
   MemberTaskLite,
   MemberTaskPriority,
+  ExistingUser,
 } from '../Components/Team';
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 import TaskDetailModal from '../Components/Common/TaskDetailModal';
@@ -288,6 +290,9 @@ export default function TeamPage() {
   // showing "Features Asignadas" inside the member detail panel.
   const [allFeatures, setAllFeatures] = useState<FeatureDTO[]>([]);
 
+  // All users in the system — used to populate the "Add Existing User" dropdown
+  const [allUsers, setAllUsers] = useState<UserDTO[]>([]);
+
   // Selection is nullable so we can render an empty state when no members.
   const [selectedId, setSelectedId] = useState<number | null>(
     () => members[0]?.id ?? null
@@ -413,6 +418,21 @@ export default function TeamPage() {
     };
   }, []);
 
+  // Fetch all users for the "Add Existing User" modal dropdown
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/users-tt')
+      .then(r => (r.ok ? r.json() : []))
+      .then((data: UserDTO[]) => {
+        if (cancelled) return;
+        setAllUsers(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const isPageLoading =
     projectId != null
     && projectId >= 0
@@ -423,6 +443,12 @@ export default function TeamPage() {
     () =>
       projectId != null ? allTasks.filter(t => t.pjId === projectId) : [],
     [allTasks, projectId]
+  );
+
+  // Current team member IDs for filtering in the "Add Existing User" modal
+  const currentTeamMemberIds = useMemo(
+    () => new Set(members.map(m => m.id)),
+    [members]
   );
 
   // Resolve the project name from the cached project list (filled by the
@@ -513,7 +539,7 @@ export default function TeamPage() {
     setIsAddMemberModalOpen(false);
   };
 
-  const handleConfirmAddMember = async (data: NewTeamMemberData) => {
+  const handleConfirmAddNewMember = async (data: NewTeamMemberData) => {
     if (projectId == null || projectId < 0) {
       setAddMemberError('Cannot add members to demo projects.');
       return;
@@ -523,6 +549,41 @@ export default function TeamPage() {
     setAddMemberError(null);
 
     try {
+      // Check for duplicate email or telegram in existing users
+      const emailLower = data.mail.trim().toLowerCase();
+      const telegramLower = data.idTelegram.trim().toLowerCase();
+
+      const duplicateEmail = allUsers.find(
+        u => u.mail && u.mail.toLowerCase() === emailLower
+      );
+      const duplicateTelegram = allUsers.find(
+        u => u.idTelegram.toLowerCase() === telegramLower
+      );
+
+      if (duplicateEmail && duplicateTelegram) {
+        setAddMemberError(
+          `Email and Telegram ID are already registered. User: ${duplicateEmail.nameUser}`
+        );
+        setAddMemberSubmitting(false);
+        return;
+      }
+
+      if (duplicateEmail) {
+        setAddMemberError(
+          `Email is already registered to user: ${duplicateEmail.nameUser}`
+        );
+        setAddMemberSubmitting(false);
+        return;
+      }
+
+      if (duplicateTelegram) {
+        setAddMemberError(
+          `Telegram ID is already registered to user: ${duplicateTelegram.nameUser}`
+        );
+        setAddMemberSubmitting(false);
+        return;
+      }
+
       const newUserPayload = {
         nameUser: data.nameUser,
         password: null,
@@ -555,6 +616,34 @@ export default function TeamPage() {
     } catch (error) {
       console.error('[TeamPage] add member failed', error);
       setAddMemberError('Could not add the new team member. Please check the data and try again.');
+    } finally {
+      setAddMemberSubmitting(false);
+    }
+  };
+
+  const handleConfirmAddExistingMember = async (userId: number) => {
+    if (projectId == null || projectId < 0) {
+      setAddMemberError('Cannot add members to demo projects.');
+      return;
+    }
+
+    setAddMemberSubmitting(true);
+    setAddMemberError(null);
+
+    try {
+      const membershipResponse = await fetch(
+        `/api/project-memberships?pjId=${projectId}&userId=${userId}`,
+        { method: 'POST' }
+      );
+      if (!membershipResponse.ok) {
+        throw new Error(`Failed to add project membership (${membershipResponse.status})`);
+      }
+
+      setIsAddMemberModalOpen(false);
+      setMembersRefreshToken(t => t + 1);
+    } catch (error) {
+      console.error('[TeamPage] add existing member failed', error);
+      setAddMemberError('Could not add the user to the team. They may already be a member.');
     } finally {
       setAddMemberSubmitting(false);
     }
@@ -658,10 +747,19 @@ export default function TeamPage() {
         onClose={() => setSelectedTaskForModal(null)}
         task={selectedTaskForModal}
       />
-      <AddTeamMemberModal
+      <AddOrSelectTeamMemberModal
         isOpen={isAddMemberModalOpen}
         onClose={handleCloseAddMember}
-        onConfirm={handleConfirmAddMember}
+        onConfirmNew={handleConfirmAddNewMember}
+        onConfirmExisting={handleConfirmAddExistingMember}
+        existingUsers={allUsers.map(u => ({
+          userId: u.userId,
+          nameUser: u.nameUser,
+          mail: u.mail ?? undefined,
+          idTelegram: u.idTelegram,
+          role: u.role,
+        }))}
+        currentTeamMemberIds={currentTeamMemberIds}
         submitting={addMemberSubmitting}
         error={addMemberError}
       />
