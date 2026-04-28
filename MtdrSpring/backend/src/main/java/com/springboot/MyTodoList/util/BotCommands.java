@@ -5,6 +5,7 @@ public enum BotCommands {
 	REGISTER_COMMAND("/register"),
 	LOGIN_COMMAND("/login"),
 	START_COMMAND("/start"),
+	CANCEL_COMMAND("/cancel"),
 	HIDE_COMMAND("/hide"),
 	TODO_LIST("/todolist"),
 	ADD_ITEM("/addtask"),

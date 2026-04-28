@@ -163,6 +163,30 @@ public class BotActions {
 
     // ─── Bot actions ─────────────────────────────────────────────────────
 
+    public void fnCancel() {
+        if (exit) return;
+        String cmd = requestText.trim();
+        if (!cmd.equals(BotCommands.CANCEL_COMMAND.getCommand()) && !cmd.equals("CANCEL")) return;
+
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId, "❌ Operation cancelled.", telegramClient, null);
+        if (isUserAuthenticated()) {
+            showMainMenu();
+        } else {
+            InlineKeyboardMarkup teclado = InlineKeyboardMarkup.builder()
+                .keyboardRow(new InlineKeyboardRow(
+                    InlineKeyboardButton.builder()
+                        .text("🔐 Login")
+                        .callbackData(BotCommands.LOGIN_COMMAND.getCommand())
+                        .build()
+                ))
+                .build();
+            BotHelper.sendMessageToTelegramButtons(
+                chatId, "👋 Welcome! Please log in.", telegramClient, teclado);
+        }
+        exit = true;
+    }
+
     public void fnStart() {
         if (exit) return;
 
@@ -294,6 +318,9 @@ public class BotActions {
                     .build()
             ));
         }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
         BotHelper.sendMessageToTelegramButtons(
             chatId, "↩️ Select a task to reopen:", telegramClient, builder.build());
         exit = true;
@@ -403,7 +430,7 @@ public class BotActions {
 
         registrationDrafts.put(chatId, new BotRegistrationDraft());
         setCurrentState(BotConversationState.WAITING_REGISTER_NAME);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_REGISTER_NAME.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_REGISTER_NAME.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -453,7 +480,7 @@ public class BotActions {
         BotRegistrationDraft draft = registrationDrafts.computeIfAbsent(chatId, k -> new BotRegistrationDraft());
         draft.setName(requestText.trim());
         setCurrentState(BotConversationState.WAITING_REGISTER_EMAIL);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_REGISTER_EMAIL.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_REGISTER_EMAIL.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -475,7 +502,7 @@ public class BotActions {
 
         draft.setEmail(requestText.trim());
         setCurrentState(BotConversationState.WAITING_REGISTER_PASSWORD);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_REGISTER_PASSWORD.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_REGISTER_PASSWORD.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -489,7 +516,7 @@ public class BotActions {
         BotRegistrationDraft draft = registrationDrafts.computeIfAbsent(chatId, k -> new BotRegistrationDraft());
         draft.setPassword(password);
         setCurrentState(BotConversationState.WAITING_REGISTER_PASSWORD_CONFIRM);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_REGISTER_PASSWORD_CONFIRM.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_REGISTER_PASSWORD_CONFIRM.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -529,7 +556,7 @@ public class BotActions {
         BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
         draft.setName(requestText.trim());
         setCurrentState(BotConversationState.WAITING_NEW_ITEM_DESCRIPTION);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_ITEM_DESCRIPTION.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_NEW_ITEM_DESCRIPTION.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -543,7 +570,7 @@ public class BotActions {
         BotTaskDraft draft = taskDrafts.computeIfAbsent(chatId, k -> new BotTaskDraft());
         draft.setDescription(input);
         setCurrentState(BotConversationState.WAITING_NEW_ITEM_STORY_POINTS);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_ITEM_STORY_POINTS.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_NEW_ITEM_STORY_POINTS.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -648,8 +675,11 @@ public class BotActions {
         List<SprintTT> available = getAvailableSprints();
 
         if (available.isEmpty()) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.NO_SPRINTS_CREATED.getMessage(), telegramClient, null);
             clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId,
+                "⚠️ You have no active project or sprint assigned. Contact your manager.",
+                telegramClient, null);
+            showMainMenu();
             return;
         }
 
@@ -666,6 +696,9 @@ public class BotActions {
                     .build()
             ));
         }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
         BotHelper.sendMessageToTelegramButtons(chatId, BotMessages.SELECT_SPRINT.getMessage(), telegramClient, builder.build());
     }
 
@@ -693,12 +726,17 @@ public class BotActions {
             .filter(s -> !"done".equals(s.getStateSprint()))
             .collect(Collectors.toList());
 
-        // Seed only when user has no project (dev/demo fallback)
+        // Seed only when user has no project AND there are truly no sprints in the DB at all.
+        // If all sprints are 'done' (e.g. project just closed), do NOT seed — the developer
+        // simply has no active project and should see an empty list.
         if (available.isEmpty() && pjId == 0) {
-            seedSprints();
-            available = sprintTTService.findAll().stream()
-                .filter(s -> !"done".equals(s.getStateSprint()))
-                .collect(Collectors.toList());
+            boolean anySprintsInDb = !sprintTTService.findAll().isEmpty();
+            if (!anySprintsInDb) {
+                seedSprints();
+                available = sprintTTService.findAll().stream()
+                    .filter(s -> !"done".equals(s.getStateSprint()))
+                    .collect(Collectors.toList());
+            }
         }
         return available;
     }
@@ -794,6 +832,9 @@ public class BotActions {
                     .build()
             ));
         }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
 
         BotHelper.sendMessageToTelegramButtons(
             chatId, BotMessages.SELECT_FEATURE.getMessage(), telegramClient, builder.build());
@@ -844,8 +885,12 @@ public class BotActions {
         task.setNameTask(draft.getName());
         task.setInfoTask(draft.getDescription());
         task.setStoryPoints(draft.getStoryPoints());
-        task.setDateStartTask(draft.getDateStart() != null ? draft.getDateStart() : sprint.getDateStartSpr());
-        task.setDateEndSetTask(draft.getDateEnd() != null ? draft.getDateEnd() : sprint.getDateEndSpr());
+        // Active sprint → creation date as start. Future sprint → sprint's own start date.
+        LocalDate startDate = "active".equals(sprint.getStateSprint())
+            ? LocalDate.now()
+            : sprint.getDateStartSpr();
+        task.setDateStartTask(startDate);
+        task.setDateEndSetTask(sprint.getDateEndSpr());
         task.setPriority(draft.getPriority());
         task.setFeatureId(draft.getFeatureId());
         task.setUserId(currentUser.getUserId());
@@ -879,7 +924,7 @@ public class BotActions {
 
         featureDrafts.put(chatId, new BotFeatureDraft());
         setCurrentState(BotConversationState.WAITING_NEW_FEATURE_NAME);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_FEATURE_NAME.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_NEW_FEATURE_NAME.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -888,7 +933,7 @@ public class BotActions {
         draft.setName(requestText.trim());
         draft.setPriority("medium");  // default — priority not asked to the user
         setCurrentState(BotConversationState.WAITING_NEW_FEATURE_DESCRIPTION);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_FEATURE_DESCRIPTION.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_NEW_FEATURE_DESCRIPTION.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -951,8 +996,11 @@ public class BotActions {
         List<SprintTT> available = getAvailableSprints();
 
         if (available.isEmpty()) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.NO_SPRINTS_CREATED.getMessage(), telegramClient, null);
             clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId,
+                "⚠️ You have no active project or sprint assigned. Contact your manager.",
+                telegramClient, null);
+            showMainMenu();
             return;
         }
 
@@ -969,6 +1017,9 @@ public class BotActions {
                     .build()
             ));
         }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
         BotHelper.sendMessageToTelegramButtons(
             chatId, BotMessages.SELECT_FEATURE_SPRINT.getMessage(), telegramClient, builder.build());
     }
@@ -1151,6 +1202,9 @@ public class BotActions {
                     .build()
             ));
         }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
         BotHelper.sendMessageToTelegramButtons(
             chatId, "✏️ Select a task to edit:", telegramClient, builder.build());
         exit = true;
@@ -1193,15 +1247,15 @@ public class BotActions {
         switch (field) {
             case "name":
                 setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_NAME);
-                BotHelper.sendMessageToTelegram(chatId, "📝 Enter the new task name:", telegramClient, null);
+                BotHelper.sendPromptWithCancel(chatId, "📝 Enter the new task name:", telegramClient);
                 break;
             case "description":
                 setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_DESCRIPTION);
-                BotHelper.sendMessageToTelegram(chatId, "📄 Enter the new task description:", telegramClient, null);
+                BotHelper.sendPromptWithCancel(chatId, "📄 Enter the new task description:", telegramClient);
                 break;
             case "sp":
                 setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_SP);
-                BotHelper.sendMessageToTelegram(chatId, "🔢 Enter the new story point value:", telegramClient, null);
+                BotHelper.sendPromptWithCancel(chatId, "🔢 Enter the new story point value:", telegramClient);
                 break;
             case "priority":
                 setCurrentState(BotConversationState.WAITING_EDIT_TASK_NEW_PRIORITY);
@@ -1229,6 +1283,9 @@ public class BotActions {
             ))
             .keyboardRow(new InlineKeyboardRow(
                 InlineKeyboardButton.builder().text("🔄 Sprint").callbackData("EDIT_FIELD:sprint").build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
             ))
             .build();
         BotHelper.sendMessageToTelegramButtons(chatId, prompt, telegramClient, keyboard);
@@ -1321,6 +1378,14 @@ public class BotActions {
             return;
         }
         String priority = requestText.substring(5);
+        if ("cancel".equals(priority)) {
+            taskDrafts.remove(chatId);
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "❌ Operation cancelled.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
         if (!priority.equals("low") && !priority.equals("medium") && !priority.equals("high")) {
             showPriorityButtons();
             exit = true;
@@ -1446,6 +1511,9 @@ public class BotActions {
                     .build()
             ));
         }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
         BotHelper.sendMessageToTelegramButtons(chatId, "✏️ Select a feature to edit:", telegramClient, builder.build());
         exit = true;
     }
@@ -1486,6 +1554,9 @@ public class BotActions {
                 InlineKeyboardButton.builder().text("🎯 Priority").callbackData("EDIT_FEAT_FIELD:priority").build(),
                 InlineKeyboardButton.builder().text("🔄 Sprint").callbackData("EDIT_FEAT_FIELD:sprint").build()
             ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+            ))
             .build();
         BotHelper.sendMessageToTelegramButtons(chatId, "What would you like to edit?", telegramClient, keyboard);
     }
@@ -1500,11 +1571,11 @@ public class BotActions {
         switch (field) {
             case "name":
                 setCurrentState(BotConversationState.WAITING_EDIT_FEATURE_NEW_NAME);
-                BotHelper.sendMessageToTelegram(chatId, "📝 Enter the new feature name:", telegramClient, null);
+                BotHelper.sendPromptWithCancel(chatId, "📝 Enter the new feature name:", telegramClient);
                 break;
             case "description":
                 setCurrentState(BotConversationState.WAITING_EDIT_FEATURE_NEW_DESCRIPTION);
-                BotHelper.sendMessageToTelegram(chatId, "📄 Enter the new feature description:", telegramClient, null);
+                BotHelper.sendPromptWithCancel(chatId, "📄 Enter the new feature description:", telegramClient);
                 break;
             case "priority":
                 setCurrentState(BotConversationState.WAITING_EDIT_FEATURE_NEW_PRIORITY);
@@ -1579,6 +1650,14 @@ public class BotActions {
             return;
         }
         String priority = requestText.substring(6);
+        if ("cancel".equals(priority)) {
+            featureDrafts.remove(chatId);
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "❌ Operation cancelled.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
         if (!priority.equals("low") && !priority.equals("medium") && !priority.equals("high")) {
             showFeaturePriorityButtons();
             exit = true;
@@ -1693,7 +1772,7 @@ public class BotActions {
 
         taskDrafts.put(chatId, new BotTaskDraft());
         setCurrentState(BotConversationState.WAITING_NEW_ITEM_NAME);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_TODO_ITEM.getMessage(), telegramClient);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.TYPE_NEW_TODO_ITEM.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -2088,7 +2167,7 @@ public class BotActions {
         } else {
             // Button click or bare "/ask" — wait for the user to type
             setCurrentState(BotConversationState.WAITING_AI_QUESTION);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ASK_AI_PROMPT.getMessage(), telegramClient, null);
+            BotHelper.sendPromptWithCancel(chatId, BotMessages.ASK_AI_PROMPT.getMessage(), telegramClient);
         }
         exit = true;
     }
@@ -2132,7 +2211,7 @@ public class BotActions {
         }
 
         setCurrentState(BotConversationState.WAITING_AI_CREATE_DESCRIPTION);
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.AI_CREATE_PROMPT.getMessage(), telegramClient, null);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.AI_CREATE_PROMPT.getMessage(), telegramClient);
         exit = true;
     }
 
@@ -2410,6 +2489,9 @@ public class BotActions {
                     .build()
             ));
         }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
         BotHelper.sendMessageToTelegramButtons(chatId, sb.toString(), telegramClient, builder.build());
         exit = true;
     }
