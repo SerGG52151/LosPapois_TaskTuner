@@ -11,6 +11,7 @@ import StatisticsPage from './Pages/StatisticsPage';
 import ProjectsPage from './Pages/ProjectsPage';
 import { Sidebar, SidebarToggle } from './Components/Sidebar';
 import PageBreadcrumb from './Components/Header/PageBreadcrumb';
+import HomeButton from './Components/Header/HomeButton';
 // Old top-bar Navigation kept importable in case we need to revert quickly,
 // but it is no longer rendered — Sidebar replaces it.
 // import Navigation from './Components/Navigation';
@@ -71,6 +72,7 @@ function App() {
         {/* sidebar header so the two zones align cleanly at the corner. */}
         <header className="flex items-center gap-3 px-4 h-16 bg-white border-b-2 border-brand">
           <SidebarToggle isOpen={sidebarOpen} onToggle={toggleSidebar} />
+          <HomeButton />
           <PageBreadcrumb />
         </header>
         <main className="flex-1 overflow-auto">{routes}</main>
