@@ -45,7 +45,7 @@ public class AuthController {
             ));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "Correo o contraseña incorrectos."));
+            .body(Map.of("error", "Incorrect email or password."));
     }
 
     @PostMapping("/register")
