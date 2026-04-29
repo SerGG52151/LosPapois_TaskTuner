@@ -365,7 +365,7 @@ export default function AddOrSelectTeamMemberModal({
               </button>
               <button
                 type="submit"
-                disabled={!isSelectValid || submitting || availableUsers.length === 0 || filteredUsers.length === 0}
+                disabled={!isSelectValid || submitting || availableUsers.length === 0}
                 className="flex-1 bg-brand hover:bg-brand-dark text-white py-3 rounded-xl
                            font-semibold shadow-sm transition-colors disabled:opacity-60"
               >
