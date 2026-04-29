@@ -15,8 +15,8 @@ function ProjectProgressBox({
   sprintEndDate,
   completionPercent,
 }: ProjectProgressBoxProps) {
-  const daysLeft = useMemo(() => {
-    if (!sprintEndDate) return null;
+  const { daysLeft, hasEnded } = useMemo(() => {
+    if (!sprintEndDate) return { daysLeft: null, hasEnded: false };
     // Parse date-only string as local date to avoid timezone offset issues
     const [y, m, d] = sprintEndDate.split('-').map(Number);
     const end = new Date(y, m - 1, d);
@@ -24,7 +24,8 @@ function ProjectProgressBox({
     const now = new Date();
     const diffTime = end.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
+    if (diffDays < 0) return { daysLeft: 0, hasEnded: true };
+    return { daysLeft: diffDays, hasEnded: false };
   }, [sprintEndDate]);
 
   const safePercent = Math.max(0, Math.min(completionPercent, 100));
@@ -40,7 +41,11 @@ function ProjectProgressBox({
         {daysLeft !== null && (
           <div className="flex items-center gap-1.5 text-sm text-green-700 font-semibold">
             <CalendarIcon className="h-4 w-4" aria-hidden="true" />
-            {daysLeft === 0 ? 'Today' : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
+            {hasEnded
+              ? 'Ended'
+              : daysLeft === 0
+                ? 'Today'
+                : `${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
           </div>
         )}
       </div>

@@ -122,9 +122,6 @@ export default function StatisticsPage() {
   const [activeSprintEndDate, setActiveSprintEndDate] = useState<string | null>(null);
   const [sprintTasksByState, setSprintTasksByState] = useState({ active: 0, delayed: 0, done: 0 });
   const [projectProgressPercent, setProjectProgressPercent] = useState(0);
-  // Alias for backward compatibility with render code
-  const setSprintProgressPercent = setProjectProgressPercent;
-  const sprintProgressPercent = projectProgressPercent;
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -241,50 +238,50 @@ export default function StatisticsPage() {
         setSprints(sortedSprints);
         setSeriesBySprint(computedSeries);
 
-        // Fetch active sprint independently for pie chart and project progress
-        const activeSprints = sortedSprints.filter(s => s.stateSprint?.toLowerCase() === 'active');
-        const mostRecentSprint = activeSprints.length > 0 
-          ? activeSprints[activeSprints.length - 1] 
-          : sortedSprints[sortedSprints.length - 1];
-        if (mostRecentSprint && !cancelled) {
-          setActiveSprint(mostRecentSprint);
-          setActiveSprintEndDate(mostRecentSprint.dateEndSpr ?? null);
-
-          // Get unique tasks across all sprints and determine if they are 'done'
-          const latestTaskStatus = new Map<number, string>();
-          
-          // Since sortedSprints is ordered by start date, process them in order.
-          // A task's final status is whatever it was in its latest sprint.
-          sprintLinks.forEach(links => {
-            links.forEach(link => {
-              latestTaskStatus.set(link.taskId, normalizeTaskState(link.stateTask));
-            });
+        // Calculate project progress based on all unique tasks in all sprints.
+        // A task's final status is whatever it was in its latest sprint.
+        const latestTaskStatus = new Map<number, string>();
+        sprintLinks.forEach(links => {
+          links.forEach(link => {
+            latestTaskStatus.set(link.taskId, normalizeTaskState(link.stateTask));
           });
+        });
+        let projectDoneCount = 0;
+        latestTaskStatus.forEach(status => {
+          if (status === 'done') projectDoneCount++;
+        });
+        const projectTotalTasks = latestTaskStatus.size;
+        const projectProgressPct = projectTotalTasks > 0
+          ? Math.round((projectDoneCount / projectTotalTasks) * 100)
+          : 0;
+        setProjectProgressPercent(projectProgressPct);
 
-          // Calculate project progress based on all unique tasks in all sprints
-          let projectDoneCount = 0;
-          latestTaskStatus.forEach(status => {
-            if (status === 'done') projectDoneCount++;
-          });
-          const projectTotalTasks = latestTaskStatus.size;
-          const projectProgressPct = projectTotalTasks > 0 
-            ? Math.round((projectDoneCount / projectTotalTasks) * 100) 
-            : 0;
-            
-          setSprintProgressPercent(projectProgressPct);
+        // Only set active sprint when one is truly active — no fallback to latest sprint.
+        const activeSprintsList = sortedSprints.filter(s => s.stateSprint?.toLowerCase() === 'active');
+        const currentActiveSprint = activeSprintsList[activeSprintsList.length - 1] ?? null;
 
-          // Reuse already-fetched tasks for the most recent sprint pie chart
-          const mostRecentSprintIndex = sortedSprints.findIndex(
-            sprint => sprint.sprId === mostRecentSprint.sprId
+        if (currentActiveSprint && !cancelled) {
+          setActiveSprint(currentActiveSprint);
+          setActiveSprintEndDate(currentActiveSprint.dateEndSpr ?? null);
+
+          // Reuse already-fetched tasks for the active sprint pie chart
+          const activeSprintIndex = sortedSprints.findIndex(
+            sprint => sprint.sprId === currentActiveSprint.sprId
           );
-          const mostRecentSprintTasks =
-            mostRecentSprintIndex >= 0 ? sprintLinks[mostRecentSprintIndex] ?? [] : [];
+          const activeSprintTasks =
+            activeSprintIndex >= 0 ? sprintLinks[activeSprintIndex] ?? [] : [];
 
-          const activeTasks = mostRecentSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'active').length;
-          const delayedTasks = mostRecentSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'delayed').length;
-          const doneTasks = mostRecentSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'done').length;
+          const activeTasks = activeSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'active').length;
+          const delayedTasks = activeSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'delayed').length;
+          const doneTasks = activeSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'done').length;
 
           setSprintTasksByState({ active: activeTasks, delayed: delayedTasks, done: doneTasks });
+        } else if (!cancelled) {
+          // No active sprint found — reset sprint display state so stale data from
+          // a previously viewed project is not shown.
+          setActiveSprint(null);
+          setActiveSprintEndDate(null);
+          setSprintTasksByState({ active: 0, delayed: 0, done: 0 });
         }
 
         // Start with no members selected so the user explicitly chooses
@@ -454,7 +451,7 @@ export default function StatisticsPage() {
             <ProjectProgressBox
               projectName={projectName}
               sprintEndDate={activeSprintEndDate}
-              completionPercent={sprintProgressPercent}
+              completionPercent={projectProgressPercent}
             />
           </div>
 
