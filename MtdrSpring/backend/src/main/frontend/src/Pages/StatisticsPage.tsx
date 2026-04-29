@@ -121,7 +121,10 @@ export default function StatisticsPage() {
   const [activeSprint, setActiveSprint] = useState<SprintDTO | null>(null);
   const [activeSprintEndDate, setActiveSprintEndDate] = useState<string | null>(null);
   const [sprintTasksByState, setSprintTasksByState] = useState({ active: 0, delayed: 0, done: 0 });
-  const [sprintProgressPercent, setSprintProgressPercent] = useState(0);
+  const [projectProgressPercent, setProjectProgressPercent] = useState(0);
+  // Alias for backward compatibility with render code
+  const setSprintProgressPercent = setProjectProgressPercent;
+  const sprintProgressPercent = projectProgressPercent;
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -134,6 +137,16 @@ export default function StatisticsPage() {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
+
+  // Reset sprint/project progress states when projectId is invalid
+  useEffect(() => {
+    if (projectId == null || projectId < 0) {
+      setActiveSprint(null);
+      setActiveSprintEndDate(null);
+      setSprintTasksByState({ active: 0, delayed: 0, done: 0 });
+      setProjectProgressPercent(0);
+    }
+  }, [projectId]);
 
   useEffect(() => {
     if (projectId == null || projectId < 0) {
@@ -231,7 +244,7 @@ export default function StatisticsPage() {
         // Fetch active sprint independently for pie chart and project progress
         const activeSprints = sortedSprints.filter(s => s.stateSprint?.toLowerCase() === 'active');
         const mostRecentSprint = activeSprints.length > 0 
-          ? activeSprints[0] 
+          ? activeSprints[activeSprints.length - 1] 
           : sortedSprints[sortedSprints.length - 1];
         if (mostRecentSprint && !cancelled) {
           setActiveSprint(mostRecentSprint);
@@ -260,21 +273,18 @@ export default function StatisticsPage() {
             
           setSprintProgressPercent(projectProgressPct);
 
-          // Fetch tasks specifically for the most recent sprint pie chart
-          fetch(`/api/sprint-tasks/sprint/${mostRecentSprint.sprId}`)
-            .then(r => (r.ok ? r.json() : []))
-            .then((sprintTasks: SprintTaskDTO[]) => {
-              if (cancelled) return;
-              
-              const activeTasks = sprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'active').length;
-              const delayedTasks = sprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'delayed').length;
-              const doneTasks = sprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'done').length;
+          // Reuse already-fetched tasks for the most recent sprint pie chart
+          const mostRecentSprintIndex = sortedSprints.findIndex(
+            sprint => sprint.sprId === mostRecentSprint.sprId
+          );
+          const mostRecentSprintTasks =
+            mostRecentSprintIndex >= 0 ? sprintLinks[mostRecentSprintIndex] ?? [] : [];
 
-              setSprintTasksByState({ active: activeTasks, delayed: delayedTasks, done: doneTasks });
-            })
-            .catch(() => {
-              setSprintTasksByState({ active: 0, delayed: 0, done: 0 });
-            });
+          const activeTasks = mostRecentSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'active').length;
+          const delayedTasks = mostRecentSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'delayed').length;
+          const doneTasks = mostRecentSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'done').length;
+
+          setSprintTasksByState({ active: activeTasks, delayed: delayedTasks, done: doneTasks });
         }
 
         // Start with no members selected so the user explicitly chooses

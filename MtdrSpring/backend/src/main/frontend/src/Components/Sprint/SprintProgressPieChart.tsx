@@ -29,7 +29,7 @@ function SprintProgressPieChart({
   const delayedPercent = (delayedTasks / total) * 100;
   const donePercent = (doneTasks / total) * 100;
 
-  // SVG pie chart using conic gradient approach
+  // SVG pie chart using circle strokes with strokeDasharray/strokeDashoffset
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
 

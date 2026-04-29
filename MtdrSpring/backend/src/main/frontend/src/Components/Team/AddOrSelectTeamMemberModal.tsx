@@ -313,23 +313,36 @@ export default function AddOrSelectTeamMemberModal({
                     <p className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg p-3">
                       No users match your search.
                     </p>
-                  ) : (
-                    <select
-                      id="select-user"
-                      value={selectedUserId ?? ''}
-                      onChange={e => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
-                                 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
-                                 transition-colors"
-                    >
-                      <option value="">-- Choose a user --</option>
-                      {filteredUsers.map(user => (
-                        <option key={user.userId} value={user.userId}>
-                          {user.nameUser}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  ) : (() => {
+                    const selectedUser = selectedUserId == null
+                      ? null
+                      : availableUsers.find(user => user.userId === selectedUserId) ?? null;
+                    const selectedUserMissingFromFilter = selectedUser != null
+                      && !filteredUsers.some(user => user.userId === selectedUser.userId);
+
+                    return (
+                      <select
+                        id="select-user"
+                        value={selectedUserId ?? ''}
+                        onChange={e => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
+                                   focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
+                                   transition-colors"
+                      >
+                        <option value="">-- Choose a user --</option>
+                        {selectedUserMissingFromFilter && (
+                          <option value={selectedUser.userId}>
+                            {selectedUser.nameUser}
+                          </option>
+                        )}
+                        {filteredUsers.map(user => (
+                          <option key={user.userId} value={user.userId}>
+                            {user.nameUser}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </div>
               </>
             )}

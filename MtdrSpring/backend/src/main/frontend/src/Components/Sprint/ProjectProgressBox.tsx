@@ -17,7 +17,10 @@ function ProjectProgressBox({
 }: ProjectProgressBoxProps) {
   const daysLeft = useMemo(() => {
     if (!sprintEndDate) return null;
-    const end = new Date(sprintEndDate);
+    // Parse date-only string as local date to avoid timezone offset issues
+    const [y, m, d] = sprintEndDate.split('-').map(Number);
+    const end = new Date(y, m - 1, d);
+    end.setHours(23, 59, 59, 999); // Treat as end-of-day
     const now = new Date();
     const diffTime = end.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
