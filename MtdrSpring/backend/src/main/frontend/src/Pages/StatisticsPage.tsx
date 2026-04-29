@@ -30,8 +30,8 @@ interface SprintDTO {
   sprId: number;
   nameSprint: string;
   dateStartSpr: string | null;
-  dateEndSpr?: string | null;
-  stateSprint?: string | null;
+  dateEndSpr: string | null;
+  stateSprint: string | null;
 }
 
 interface SprintTaskDTO {
