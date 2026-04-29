@@ -16,6 +16,8 @@ window.fetch = async (...args) => {
     
     // Explicitly let Spring backend know this is an API call, not browser
     headers.set('X-Requested-With', 'XMLHttpRequest');
+    // Skip ngrok browser warning interstitial when tunneling locally
+    headers.set('ngrok-skip-browser-warning', '1');
     
     config.headers = headers;
   }
