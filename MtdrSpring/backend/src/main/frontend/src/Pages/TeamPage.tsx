@@ -37,6 +37,12 @@ import PageLoading from '../Components/Common/PageLoading';
 interface ProjectDTO {
   pjId: number;
   namePj: string;
+  /**
+   * Real end date — null/empty means the project is still active.
+   * Used to scope the "user can only be in one active project at a time"
+   * rule to active projects only.
+   */
+  dateEndRealPj?: string | null;
 }
 
 /** Backend ProjectUserTT shape — composite key (pjId, userId). */
@@ -293,6 +299,13 @@ export default function TeamPage() {
   // All users in the system — used to populate the "Add Existing User" dropdown
   const [allUsers, setAllUsers] = useState<UserDTO[]>([]);
 
+  // Cross-project membership snapshot — needed to enforce the "a user can
+  // only belong to one active project at a time" rule. Both pieces are
+  // refreshed alongside membersRefreshToken so the modal sees up-to-date
+  // assignments after every add/remove.
+  const [allProjects, setAllProjects] = useState<ProjectDTO[]>([]);
+  const [allMemberships, setAllMemberships] = useState<MembershipDTO[]>([]);
+
   // Selection is nullable so we can render an empty state when no members.
   const [selectedId, setSelectedId] = useState<number | null>(
     () => members[0]?.id ?? null
@@ -432,6 +445,54 @@ export default function TeamPage() {
       cancelled = true;
     };
   }, []);
+
+  // Fetch all projects + all memberships so the "Add Existing User" modal
+  // can warn when a candidate is already in another active project.
+  // Tied to membersRefreshToken so the snapshot stays fresh after the
+  // current page itself adds or removes a member.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch('/api/projects')
+        .then(r => (r.ok ? r.json() : []))
+        .catch(() => []),
+      fetch('/api/project-memberships')
+        .then(r => (r.ok ? r.json() : []))
+        .catch(() => []),
+    ]).then(([projects, memberships]: [ProjectDTO[], MembershipDTO[]]) => {
+      if (cancelled) return;
+      setAllProjects(projects ?? []);
+      setAllMemberships(memberships ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [membersRefreshToken]);
+
+  // userId → name of the OTHER active project the user is already on.
+  // Built fresh from the latest memberships + projects snapshot.
+  // Active = dateEndRealPj is null/empty. The current project is excluded
+  // because users in it are already filtered out via currentTeamMemberIds.
+  const blockedUsersByActiveProject = useMemo(() => {
+    const map = new Map<number, string>();
+    if (projectId == null) return map;
+
+    const activeProjectsById = new Map<number, ProjectDTO>();
+    for (const p of allProjects) {
+      const isActive = p.dateEndRealPj == null || p.dateEndRealPj === '';
+      if (isActive && p.pjId !== projectId) {
+        activeProjectsById.set(p.pjId, p);
+      }
+    }
+
+    for (const m of allMemberships) {
+      const proj = activeProjectsById.get(m.pjId);
+      if (proj && !map.has(m.userId)) {
+        map.set(m.userId, proj.namePj);
+      }
+    }
+    return map;
+  }, [allProjects, allMemberships, projectId]);
 
   const isPageLoading =
     projectId != null
@@ -627,6 +688,17 @@ export default function TeamPage() {
       return;
     }
 
+    // Defense-in-depth: even though the modal disables blocked users, we
+    // re-check here in case the snapshot changed between render and submit
+    // (e.g. another tab added the user to a different project meanwhile).
+    const blockingProject = blockedUsersByActiveProject.get(userId);
+    if (blockingProject) {
+      setAddMemberError(
+        `This user is already assigned to "${blockingProject}". A user can only belong to one active project at a time.`
+      );
+      return;
+    }
+
     setAddMemberSubmitting(true);
     setAddMemberError(null);
 
@@ -760,6 +832,7 @@ export default function TeamPage() {
           role: u.role,
         }))}
         currentTeamMemberIds={currentTeamMemberIds}
+        blockedUsersByActiveProject={blockedUsersByActiveProject}
         submitting={addMemberSubmitting}
         error={addMemberError}
       />

@@ -21,6 +21,13 @@ export interface AddOrSelectTeamMemberModalProps {
   onConfirmExisting: (userId: number) => void;
   existingUsers: ExistingUser[];
   currentTeamMemberIds: Set<number>;
+  /**
+   * Optional map of userId → name of an OTHER active project the user is
+   * currently a member of. Users present in this map appear disabled in
+   * the dropdown so the manager can see *why* they cannot be added,
+   * instead of having them silently disappear from the list.
+   */
+  blockedUsersByActiveProject?: Map<number, string>;
   submitting?: boolean;
   error?: string | null;
 }
@@ -43,6 +50,7 @@ export default function AddOrSelectTeamMemberModal({
   onConfirmExisting,
   existingUsers,
   currentTeamMemberIds,
+  blockedUsersByActiveProject,
   submitting = false,
   error,
 }: AddOrSelectTeamMemberModalProps) {
@@ -105,7 +113,15 @@ export default function AddOrSelectTeamMemberModal({
   }, [form]);
 
   const isCreateValid = Object.keys(errors).length === 0;
-  const isSelectValid = selectedUserId !== null;
+
+  // Block the submit when the user picked someone who's already in another
+  // active project. The dropdown disables those entries, but this guard
+  // catches edge cases (keyboard navigation, stale state, etc.).
+  const blockedReason =
+    selectedUserId != null
+      ? blockedUsersByActiveProject?.get(selectedUserId) ?? null
+      : null;
+  const isSelectValid = selectedUserId !== null && blockedReason == null;
 
   const updateField = (key: keyof NewTeamMemberData, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
@@ -288,12 +304,31 @@ export default function AddOrSelectTeamMemberModal({
                              transition-colors"
                 >
                   <option value="">-- Choose a user --</option>
-                  {availableUsers.map(user => (
-                    <option key={user.userId} value={user.userId}>
-                      {user.nameUser} ({user.idTelegram})
-                    </option>
-                  ))}
+                  {availableUsers.map(user => {
+                    const blockingProject = blockedUsersByActiveProject?.get(user.userId);
+                    return (
+                      <option
+                        key={user.userId}
+                        value={user.userId}
+                        disabled={blockingProject != null}
+                      >
+                        {user.nameUser} ({user.idTelegram})
+                        {blockingProject ? ` — Already in: ${blockingProject}` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
+                {blockedReason && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                    A user can only belong to one active project at a time. This
+                    user is currently in <span className="font-semibold">{blockedReason}</span>.
+                    Remove them from that project first, or finalize it, before
+                    adding them here.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-2">
+                  Users already assigned to another active project are disabled.
+                </p>
               </div>
             )}
 
