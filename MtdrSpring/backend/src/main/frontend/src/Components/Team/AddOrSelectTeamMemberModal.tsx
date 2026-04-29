@@ -57,6 +57,7 @@ export default function AddOrSelectTeamMemberModal({
   const [mode, setMode] = useState<Mode>('create');
   const [form, setForm] = useState<NewTeamMemberData>(EMPTY_FORM);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [touched, setTouched] = useState<Record<keyof NewTeamMemberData, boolean>>({
     nameUser: false,
     idTelegram: false,
@@ -71,11 +72,22 @@ export default function AddOrSelectTeamMemberModal({
     [existingUsers, currentTeamMemberIds]
   );
 
+  // Filtered users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return availableUsers;
+    
+    const query = searchQuery.toLowerCase();
+    return availableUsers.filter(user =>
+      user.nameUser.toLowerCase().includes(query)
+    );
+  }, [availableUsers, searchQuery]);
+
   useEffect(() => {
     if (!isOpen) return;
     setForm(EMPTY_FORM);
     setTouched({ nameUser: false, idTelegram: false, mail: false });
     setSelectedUserId(null);
+    setSearchQuery('');
     setMode('create');
     const t = setTimeout(() => nameInputRef.current?.focus(), 0);
     return () => clearTimeout(t);
@@ -291,45 +303,95 @@ export default function AddOrSelectTeamMemberModal({
                 All users are already members of this team.
               </p>
             ) : (
-              <div>
-                <label htmlFor="select-user" className="block text-sm font-semibold text-gray-800 mb-2">
-                  Select User
-                </label>
-                <select
-                  id="select-user"
-                  value={selectedUserId ?? ''}
-                  onChange={e => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
-                             focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
-                             transition-colors"
-                >
-                  <option value="">-- Choose a user --</option>
-                  {availableUsers.map(user => {
-                    const blockingProject = blockedUsersByActiveProject?.get(user.userId);
+              <>
+                <div>
+                  <label htmlFor="search-user" className="block text-sm font-semibold text-gray-800 mb-2">
+                    Search User
+                  </label>
+                  <input
+                    id="search-user"
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search by username"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
+                               placeholder:text-gray-400
+                               focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
+                               transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="select-user" className="block text-sm font-semibold text-gray-800 mb-2">
+                    Select User {filteredUsers.length < availableUsers.length && `(${filteredUsers.length}/${availableUsers.length})`}
+                  </label>
+                  {filteredUsers.length === 0 ? (
+                    <p className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg p-3">
+                      No users match your search.
+                    </p>
+                  ) : (() => {
+                    const selectedUser = selectedUserId == null
+                      ? null
+                      : availableUsers.find(user => user.userId === selectedUserId) ?? null;
+                    const selectedUserMissingFromFilter = selectedUser != null
+                      && !filteredUsers.some(user => user.userId === selectedUser.userId);
+
                     return (
-                      <option
-                        key={user.userId}
-                        value={user.userId}
-                        disabled={blockingProject != null}
+                      <select
+                        id="select-user"
+                        value={selectedUserId ?? ''}
+                        onChange={e => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
+                                   focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
+                                   transition-colors"
                       >
-                        {user.nameUser} ({user.idTelegram})
-                        {blockingProject ? ` — Already in: ${blockingProject}` : ''}
-                      </option>
+                        <option value="">-- Choose a user --</option>
+                        {/* If the user picked someone now hidden by the search,
+                            keep that selection visible (and respect the "blocked
+                            by another active project" disabled state). */}
+                        {selectedUserMissingFromFilter && (() => {
+                          const blockingProject =
+                            blockedUsersByActiveProject?.get(selectedUser.userId);
+                          return (
+                            <option
+                              value={selectedUser.userId}
+                              disabled={blockingProject != null}
+                            >
+                              {selectedUser.nameUser}
+                              {blockingProject ? ` — Already in: ${blockingProject}` : ''}
+                            </option>
+                          );
+                        })()}
+                        {filteredUsers.map(user => {
+                          const blockingProject =
+                            blockedUsersByActiveProject?.get(user.userId);
+                          return (
+                            <option
+                              key={user.userId}
+                              value={user.userId}
+                              disabled={blockingProject != null}
+                            >
+                              {user.nameUser}
+                              {blockingProject ? ` — Already in: ${blockingProject}` : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
                     );
-                  })}
-                </select>
-                {blockedReason && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
-                    A user can only belong to one active project at a time. This
-                    user is currently in <span className="font-semibold">{blockedReason}</span>.
-                    Remove them from that project first, or finalize it, before
-                    adding them here.
+                  })()}
+                  {blockedReason && (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-2">
+                      A user can only belong to one active project at a time. This
+                      user is currently in <span className="font-semibold">{blockedReason}</span>.
+                      Remove them from that project first, or finalize it, before
+                      adding them here.
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Users already assigned to another active project are disabled.
                   </p>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Users already assigned to another active project are disabled.
-                </p>
-              </div>
+                </div>
+              </>
             )}
 
             {error && (

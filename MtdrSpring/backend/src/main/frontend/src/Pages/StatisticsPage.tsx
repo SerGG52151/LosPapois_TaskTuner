@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/outline';
 import PageLoading from '../Components/Common/PageLoading';
 import CloseProjectModal from '../Components/Common/CloseProjectModal';
+import { SprintProgressPieChart, ProjectProgressBox } from '../Components/Sprint';
 import CycleTimeScatterPlot from '../Components/Charts/CycleTimeScatterPlot';
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 
@@ -33,6 +34,8 @@ interface SprintDTO {
   sprId: number;
   nameSprint: string;
   dateStartSpr: string | null;
+  dateEndSpr: string | null;
+  stateSprint: string | null;
 }
 
 interface SprintTaskDTO {
@@ -172,6 +175,12 @@ export default function StatisticsPage() {
   const [appliedMemberIds, setAppliedMemberIds] = useState<number[]>([]);
   const [appliedMetric, setAppliedMetric] = useState<MetricKey>('tasksCompleted');
 
+  // Active sprint data for pie chart and project progress
+  const [activeSprint, setActiveSprint] = useState<SprintDTO | null>(null);
+  const [activeSprintEndDate, setActiveSprintEndDate] = useState<string | null>(null);
+  const [sprintTasksByState, setSprintTasksByState] = useState({ active: 0, delayed: 0, done: 0 });
+  const [projectProgressPercent, setProjectProgressPercent] = useState(0);
+
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (!memberMenuRef.current) return;
@@ -183,6 +192,16 @@ export default function StatisticsPage() {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
+
+  // Reset sprint/project progress states when projectId is invalid
+  useEffect(() => {
+    if (projectId == null || projectId < 0) {
+      setActiveSprint(null);
+      setActiveSprintEndDate(null);
+      setSprintTasksByState({ active: 0, delayed: 0, done: 0 });
+      setProjectProgressPercent(0);
+    }
+  }, [projectId]);
 
   useEffect(() => {
     if (projectId == null || projectId < 0) {
@@ -227,8 +246,8 @@ export default function StatisticsPage() {
           .sort((a, b) => a.name.localeCompare(b.name));
 
         const sortedSprints = [...projectSprints].sort((a, b) => {
-          const aTime = a.dateStartSpr ? new Date(a.dateStartSpr).getTime() : Infinity;
-          const bTime = b.dateStartSpr ? new Date(b.dateStartSpr).getTime() : Infinity;
+          const aTime = a.dateStartSpr ? new Date(a.dateStartSpr).getTime() : Number.MAX_SAFE_INTEGER;
+          const bTime = b.dateStartSpr ? new Date(b.dateStartSpr).getTime() : Number.MAX_SAFE_INTEGER;
           return aTime - bTime;
         });
 
@@ -276,6 +295,52 @@ export default function StatisticsPage() {
         setMembers(projectMembers);
         setSprints(sortedSprints);
         setSeriesBySprint(computedSeries);
+
+        // Calculate project progress based on all unique tasks in all sprints.
+        // A task's final status is whatever it was in its latest sprint.
+        const latestTaskStatus = new Map<number, string>();
+        sprintLinks.forEach(links => {
+          links.forEach(link => {
+            latestTaskStatus.set(link.taskId, normalizeTaskState(link.stateTask));
+          });
+        });
+        let projectDoneCount = 0;
+        latestTaskStatus.forEach(status => {
+          if (status === 'done') projectDoneCount++;
+        });
+        const projectTotalTasks = latestTaskStatus.size;
+        const projectProgressPct = projectTotalTasks > 0
+          ? Math.round((projectDoneCount / projectTotalTasks) * 100)
+          : 0;
+        setProjectProgressPercent(projectProgressPct);
+
+        // Only set active sprint when one is truly active — no fallback to latest sprint.
+        const activeSprintsList = sortedSprints.filter(s => s.stateSprint?.toLowerCase() === 'active');
+        const currentActiveSprint = activeSprintsList[activeSprintsList.length - 1] ?? null;
+
+        if (currentActiveSprint && !cancelled) {
+          setActiveSprint(currentActiveSprint);
+          setActiveSprintEndDate(currentActiveSprint.dateEndSpr ?? null);
+
+          // Reuse already-fetched tasks for the active sprint pie chart
+          const activeSprintIndex = sortedSprints.findIndex(
+            sprint => sprint.sprId === currentActiveSprint.sprId
+          );
+          const activeSprintTasks =
+            activeSprintIndex >= 0 ? sprintLinks[activeSprintIndex] ?? [] : [];
+
+          const activeTasks = activeSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'active').length;
+          const delayedTasks = activeSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'delayed').length;
+          const doneTasks = activeSprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'done').length;
+
+          setSprintTasksByState({ active: activeTasks, delayed: delayedTasks, done: doneTasks });
+        } else if (!cancelled) {
+          // No active sprint found — reset sprint display state so stale data from
+          // a previously viewed project is not shown.
+          setActiveSprint(null);
+          setActiveSprintEndDate(null);
+          setSprintTasksByState({ active: 0, delayed: 0, done: 0 });
+        }
 
         // Start with no members selected so the user explicitly chooses
         // who to graph before applying filters.
@@ -418,7 +483,8 @@ export default function StatisticsPage() {
         </header>
 
         {/* Project lifecycle controls — surfaced here so a manager can wrap
-            up the project right after reviewing its final metrics. */}
+            up the project right after reviewing its final metrics. Lives
+            outside the grid so it spans the full row above the dashboard. */}
         <section
           className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm shadow-gray-200/60
                      flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
@@ -480,10 +546,43 @@ export default function StatisticsPage() {
           </div>
         </section>
 
-        <section
-          className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-sm shadow-gray-200/60"
-          aria-labelledby="statistics-controls-heading"
-        >
+        {/* Main Content Grid — left rail with sprint summary + project
+            progress, right rail with the existing graph controls. */}
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+          {/* Left Column: Sprint Pie Chart & Project Progress Box */}
+          <div className="flex flex-col gap-6">
+            <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="mb-4">
+                <h3 className="text-sm font-bold text-gray-900">Sprint Task Distribution</h3>
+                {activeSprint && (
+                  <p className="text-xs text-gray-500 mt-1">{activeSprint.nameSprint}</p>
+                )}
+              </div>
+              {activeSprint ? (
+                <SprintProgressPieChart
+                  activeTasks={sprintTasksByState.active}
+                  delayedTasks={sprintTasksByState.delayed}
+                  doneTasks={sprintTasksByState.done}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">No active sprint</p>
+                </div>
+              )}
+            </section>
+
+            <ProjectProgressBox
+              projectName={projectName}
+              sprintEndDate={activeSprintEndDate}
+              completionPercent={projectProgressPercent}
+            />
+          </div>
+
+          {/* Right Column: Graph Controls and Bar Chart */}
+          <section
+            className="flex flex-col bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-sm shadow-gray-200/60"
+            aria-labelledby="statistics-controls-heading"
+          >
           <h2
             id="statistics-controls-heading"
             className="flex items-center gap-3 text-xl font-bold text-gray-800"
@@ -587,9 +686,11 @@ export default function StatisticsPage() {
               </button>
             </div>
           </div>
-        </section>
 
-        <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm shadow-gray-200/60">
+          {/* Bar Graph nested inside Bruno's wrapper section so the chart
+              shares the right column of the dashboard grid with the Graph
+              Controls above it. */}
+          <div className="border-t border-gray-100 pt-6">
           <h2 className="text-lg font-bold text-gray-800 mb-1">Bar Graph by Sprint</h2>
           <p className="text-sm text-gray-500 mb-5">
             X axis: Sprints. Y axis: {METRIC_LABEL[appliedMetric]}.
@@ -739,8 +840,9 @@ export default function StatisticsPage() {
               </div>
             </div>
           )}
+          </div>
         </section>
-
+        </div>
         <CycleTimeScatterPlot projectId={projectId} />
       </div>
 

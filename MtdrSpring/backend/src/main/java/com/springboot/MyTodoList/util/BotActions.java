@@ -685,7 +685,7 @@ public class BotActions {
 
         var builder = InlineKeyboardMarkup.builder();
         for (SprintTT sprint : available) {
-            String stateTag = "inactive".equals(sprint.getStateSprint()) ? " 🕐" : " ✅";
+            String stateTag = sprintStateTag(sprint);
             String label = sprint.getNameSprint()
                 + stateTag
                 + " (" + sprint.getDateStartSpr() + " → " + sprint.getDateEndSpr() + ")";
@@ -739,6 +739,16 @@ public class BotActions {
             }
         }
         return available;
+    }
+
+    /**
+     * Returns ✅ if the sprint is currently running (active state AND start date has passed),
+     * or 🕐 if it is a future sprint not yet started.
+     */
+    private String sprintStateTag(SprintTT sprint) {
+        boolean started = sprint.getDateStartSpr() != null
+            && !sprint.getDateStartSpr().isAfter(LocalDate.now());
+        return ("active".equals(sprint.getStateSprint()) && started) ? " ✅" : " 🕐";
     }
 
     private void seedSprints() {
@@ -1006,7 +1016,7 @@ public class BotActions {
 
         var builder = InlineKeyboardMarkup.builder();
         for (SprintTT sprint : available) {
-            String stateTag = "inactive".equals(sprint.getStateSprint()) ? " 🕐" : " ✅";
+            String stateTag = sprintStateTag(sprint);
             String label = sprint.getNameSprint()
                 + stateTag
                 + " (" + sprint.getDateStartSpr() + " → " + sprint.getDateEndSpr() + ")";
