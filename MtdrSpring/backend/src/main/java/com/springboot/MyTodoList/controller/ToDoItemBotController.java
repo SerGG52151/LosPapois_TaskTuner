@@ -3,6 +3,7 @@ package com.springboot.MyTodoList.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.longpolling.BotSession;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
@@ -43,6 +44,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
     private final FeatureTTService featureTTService;
     private final TelegramClient telegramClient;
     private final BotProps botProps;
+    private final boolean allowHistoricalSprints;
 
     @Override
     public String getBotToken() {
@@ -60,7 +62,8 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
             SprintTaskTTService sprintTaskTTService,
             TaskTTService taskTTService,
             FeatureTTService featureTTService,
-            TelegramClient telegramClient) {
+            TelegramClient telegramClient,
+            @Value("${bot.allow-historical-sprints:false}") boolean allowHistoricalSprints) {
         this.botProps = bp;
         this.telegramClient = telegramClient;
         this.toDoItemService = tsvc;
@@ -73,6 +76,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         this.sprintTaskTTService = sprintTaskTTService;
         this.taskTTService = taskTTService;
         this.featureTTService = featureTTService;
+        this.allowHistoricalSprints = allowHistoricalSprints;
     }
 
     @Override
@@ -117,7 +121,7 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService,
                 groqService,
                 userTTService, sprintTTService, projectTTService, projectUserTTService,
-                sprintTaskTTService, taskTTService, featureTTService);
+            sprintTaskTTService, taskTTService, featureTTService, allowHistoricalSprints);
         actions.setRequestText(messageFromTelegram);
         actions.setChatId(chatId);
         actions.setTelegramIdentity(telegramIdentity);

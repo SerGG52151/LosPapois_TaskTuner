@@ -66,6 +66,7 @@ public class BotActions {
     SprintTaskTTService sprintTaskTTService;
     TaskTTService taskTTService;
     FeatureTTService featureTTService;
+    boolean allowHistoricalSprints;
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
@@ -74,7 +75,8 @@ public class BotActions {
                       UserTTService uts, SprintTTService stts,
                       ProjectTTService ptts, ProjectUserTTService puts,
                       SprintTaskTTService sttts,
-                      TaskTTService ttts, FeatureTTService ftts) {
+                      TaskTTService ttts, FeatureTTService ftts,
+                      boolean allowHistoricalSprints) {
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
@@ -86,6 +88,7 @@ public class BotActions {
         sprintTaskTTService = sttts;
         taskTTService = ttts;
         featureTTService = ftts;
+        this.allowHistoricalSprints = allowHistoricalSprints;
         exit = false;
     }
 
@@ -723,7 +726,7 @@ public class BotActions {
             : sprintTTService.findAll();
 
         List<SprintTT> available = source.stream()
-            .filter(s -> !"done".equals(s.getStateSprint()))
+            .filter(s -> allowHistoricalSprints || !"done".equals(s.getStateSprint()))
             .collect(Collectors.toList());
 
         // Seed only when user has no project AND there are truly no sprints in the DB at all.
@@ -2453,7 +2456,7 @@ public class BotActions {
         }
 
         UserTT user = getAuthenticatedUser();
-        List<TaskTT> pending = taskTTService.getTasksByUserInActiveSprint(user.getUserId()).stream()
+        List<TaskTT> pending = getTasksEligibleForCompletion(user.getUserId()).stream()
             .filter(t -> t.getDateEndRealTask() == null)
             .collect(Collectors.toList());
 
@@ -2525,11 +2528,16 @@ public class BotActions {
         task.setDateEndRealTask(LocalDate.now());
         taskTTService.updateTask(taskId, task);
 
-        sprintTaskTTService.getSprintsForTask(taskId).stream()
-            .filter(st -> "active".equals(st.getStateTask()))
-            .findFirst()
-            .ifPresent(st -> sprintTaskTTService.updateTaskState(
-                st.getId().getSprId(), taskId, "done"));
+        if (allowHistoricalSprints) {
+            sprintTaskTTService.getSprintsForTask(taskId).forEach(st ->
+                sprintTaskTTService.updateTaskState(st.getId().getSprId(), taskId, "done"));
+        } else {
+            sprintTaskTTService.getSprintsForTask(taskId).stream()
+                .filter(st -> "active".equals(st.getStateTask()))
+                .findFirst()
+                .ifPresent(st -> sprintTaskTTService.updateTaskState(
+                    st.getId().getSprId(), taskId, "done"));
+        }
 
         boolean onTime = !LocalDate.now().isAfter(task.getDateEndSetTask());
         String resultado = onTime ? "⏱ delivered on time!" : "⚠️ delivered late.";
@@ -2538,6 +2546,16 @@ public class BotActions {
 
         showMainMenu();
         exit = true;
+    }
+
+    private List<TaskTT> getTasksEligibleForCompletion(long userId) {
+        if (allowHistoricalSprints) {
+            return taskTTService.getTasksByUser(userId).stream()
+                .filter(task -> sprintTaskTTService.getSprintsForTask(task.getTaskId()).size() > 0)
+                .collect(Collectors.toList());
+        }
+
+        return taskTTService.getTasksByUserInActiveSprint(userId);
     }
 
     private String buildTable(String[] headers, List<String[]> rows) {
