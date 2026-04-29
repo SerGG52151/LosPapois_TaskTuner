@@ -7,6 +7,7 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import PageLoading from '../Components/Common/PageLoading';
+import { SprintProgressPieChart, ProjectProgressBox } from '../Components/Sprint';
 import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface ProjectDTO {
@@ -28,6 +29,8 @@ interface SprintDTO {
   sprId: number;
   nameSprint: string;
   dateStartSpr: string | null;
+  dateEndSpr?: string | null;
+  stateSprint?: string | null;
 }
 
 interface SprintTaskDTO {
@@ -113,6 +116,12 @@ export default function StatisticsPage() {
   const [appliedMemberIds, setAppliedMemberIds] = useState<number[]>([]);
   const [appliedMetric, setAppliedMetric] = useState<MetricKey>('tasksCompleted');
 
+  // Active sprint data for pie chart and project progress
+  const [activeSprint, setActiveSprint] = useState<SprintDTO | null>(null);
+  const [activeSprintEndDate, setActiveSprintEndDate] = useState<string | null>(null);
+  const [sprintTasksByState, setSprintTasksByState] = useState({ active: 0, delayed: 0, done: 0 });
+  const [sprintProgressPercent, setSprintProgressPercent] = useState(0);
+
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (!memberMenuRef.current) return;
@@ -168,8 +177,8 @@ export default function StatisticsPage() {
           .sort((a, b) => a.name.localeCompare(b.name));
 
         const sortedSprints = [...projectSprints].sort((a, b) => {
-          const aTime = a.dateStartSpr ? new Date(a.dateStartSpr).getTime() : Infinity;
-          const bTime = b.dateStartSpr ? new Date(b.dateStartSpr).getTime() : Infinity;
+          const aTime = a.dateStartSpr ? new Date(a.dateStartSpr).getTime() : Number.MAX_SAFE_INTEGER;
+          const bTime = b.dateStartSpr ? new Date(b.dateStartSpr).getTime() : Number.MAX_SAFE_INTEGER;
           return aTime - bTime;
         });
 
@@ -217,6 +226,55 @@ export default function StatisticsPage() {
         setMembers(projectMembers);
         setSprints(sortedSprints);
         setSeriesBySprint(computedSeries);
+
+        // Fetch active sprint independently for pie chart and project progress
+        const activeSprints = sortedSprints.filter(s => s.stateSprint?.toLowerCase() === 'active');
+        const mostRecentSprint = activeSprints.length > 0 
+          ? activeSprints[0] 
+          : sortedSprints[sortedSprints.length - 1];
+        if (mostRecentSprint && !cancelled) {
+          setActiveSprint(mostRecentSprint);
+          setActiveSprintEndDate(mostRecentSprint.dateEndSpr ?? null);
+
+          // Get unique tasks across all sprints and determine if they are 'done'
+          const latestTaskStatus = new Map<number, string>();
+          
+          // Since sortedSprints is ordered by start date, process them in order.
+          // A task's final status is whatever it was in its latest sprint.
+          sprintLinks.forEach(links => {
+            links.forEach(link => {
+              latestTaskStatus.set(link.taskId, normalizeTaskState(link.stateTask));
+            });
+          });
+
+          // Calculate project progress based on all unique tasks in all sprints
+          let projectDoneCount = 0;
+          latestTaskStatus.forEach(status => {
+            if (status === 'done') projectDoneCount++;
+          });
+          const projectTotalTasks = latestTaskStatus.size;
+          const projectProgressPct = projectTotalTasks > 0 
+            ? Math.round((projectDoneCount / projectTotalTasks) * 100) 
+            : 0;
+            
+          setSprintProgressPercent(projectProgressPct);
+
+          // Fetch tasks specifically for the most recent sprint pie chart
+          fetch(`/api/sprint-tasks/sprint/${mostRecentSprint.sprId}`)
+            .then(r => (r.ok ? r.json() : []))
+            .then((sprintTasks: SprintTaskDTO[]) => {
+              if (cancelled) return;
+              
+              const activeTasks = sprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'active').length;
+              const delayedTasks = sprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'delayed').length;
+              const doneTasks = sprintTasks.filter(t => normalizeTaskState(t.stateTask) === 'done').length;
+
+              setSprintTasksByState({ active: activeTasks, delayed: delayedTasks, done: doneTasks });
+            })
+            .catch(() => {
+              setSprintTasksByState({ active: 0, delayed: 0, done: 0 });
+            });
+        }
 
         // Start with no members selected so the user explicitly chooses
         // who to graph before applying filters.
@@ -358,10 +416,42 @@ export default function StatisticsPage() {
           </p>
         </header>
 
-        <section
-          className="bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-sm shadow-gray-200/60"
-          aria-labelledby="statistics-controls-heading"
-        >
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
+          {/* Left Column: Sprint Pie Chart & Project Progress Box */}
+          <div className="flex flex-col gap-6">
+            <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+              <div className="mb-4">
+                <h3 className="text-sm font-bold text-gray-900">Sprint Task Distribution</h3>
+                {activeSprint && (
+                  <p className="text-xs text-gray-500 mt-1">{activeSprint.nameSprint}</p>
+                )}
+              </div>
+              {activeSprint ? (
+                <SprintProgressPieChart
+                  activeTasks={sprintTasksByState.active}
+                  delayedTasks={sprintTasksByState.delayed}
+                  doneTasks={sprintTasksByState.done}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-48 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">No active sprint</p>
+                </div>
+              )}
+            </section>
+
+            <ProjectProgressBox
+              projectName={projectName}
+              sprintEndDate={activeSprintEndDate}
+              completionPercent={sprintProgressPercent}
+            />
+          </div>
+
+          {/* Right Column: Graph Controls and Bar Chart */}
+          <section
+            className="flex flex-col bg-white border border-gray-200 rounded-xl p-6 space-y-5 shadow-sm shadow-gray-200/60"
+            aria-labelledby="statistics-controls-heading"
+          >
           <h2
             id="statistics-controls-heading"
             className="flex items-center gap-3 text-xl font-bold text-gray-800"
@@ -616,7 +706,8 @@ export default function StatisticsPage() {
               </div>
             </div>
           )}
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   );

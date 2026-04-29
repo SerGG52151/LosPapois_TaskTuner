@@ -49,6 +49,7 @@ export default function AddOrSelectTeamMemberModal({
   const [mode, setMode] = useState<Mode>('create');
   const [form, setForm] = useState<NewTeamMemberData>(EMPTY_FORM);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [touched, setTouched] = useState<Record<keyof NewTeamMemberData, boolean>>({
     nameUser: false,
     idTelegram: false,
@@ -63,11 +64,22 @@ export default function AddOrSelectTeamMemberModal({
     [existingUsers, currentTeamMemberIds]
   );
 
+  // Filtered users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return availableUsers;
+    
+    const query = searchQuery.toLowerCase();
+    return availableUsers.filter(user =>
+      user.nameUser.toLowerCase().includes(query)
+    );
+  }, [availableUsers, searchQuery]);
+
   useEffect(() => {
     if (!isOpen) return;
     setForm(EMPTY_FORM);
     setTouched({ nameUser: false, idTelegram: false, mail: false });
     setSelectedUserId(null);
+    setSearchQuery('');
     setMode('create');
     const t = setTimeout(() => nameInputRef.current?.focus(), 0);
     return () => clearTimeout(t);
@@ -275,26 +287,51 @@ export default function AddOrSelectTeamMemberModal({
                 All users are already members of this team.
               </p>
             ) : (
-              <div>
-                <label htmlFor="select-user" className="block text-sm font-semibold text-gray-800 mb-2">
-                  Select User
-                </label>
-                <select
-                  id="select-user"
-                  value={selectedUserId ?? ''}
-                  onChange={e => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
-                             focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
-                             transition-colors"
-                >
-                  <option value="">-- Choose a user --</option>
-                  {availableUsers.map(user => (
-                    <option key={user.userId} value={user.userId}>
-                      {user.nameUser} ({user.idTelegram})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <>
+                <div>
+                  <label htmlFor="search-user" className="block text-sm font-semibold text-gray-800 mb-2">
+                    Search User
+                  </label>
+                  <input
+                    id="search-user"
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search by username"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
+                               placeholder:text-gray-400
+                               focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
+                               transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="select-user" className="block text-sm font-semibold text-gray-800 mb-2">
+                    Select User {filteredUsers.length < availableUsers.length && `(${filteredUsers.length}/${availableUsers.length})`}
+                  </label>
+                  {filteredUsers.length === 0 ? (
+                    <p className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg p-3">
+                      No users match your search.
+                    </p>
+                  ) : (
+                    <select
+                      id="select-user"
+                      value={selectedUserId ?? ''}
+                      onChange={e => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm
+                                 focus:outline-none focus:ring-2 focus:ring-brand focus:border-brand
+                                 transition-colors"
+                    >
+                      <option value="">-- Choose a user --</option>
+                      {filteredUsers.map(user => (
+                        <option key={user.userId} value={user.userId}>
+                          {user.nameUser}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </>
             )}
 
             {error && (
@@ -315,7 +352,7 @@ export default function AddOrSelectTeamMemberModal({
               </button>
               <button
                 type="submit"
-                disabled={!isSelectValid || submitting || availableUsers.length === 0}
+                disabled={!isSelectValid || submitting || availableUsers.length === 0 || filteredUsers.length === 0}
                 className="flex-1 bg-brand hover:bg-brand-dark text-white py-3 rounded-xl
                            font-semibold shadow-sm transition-colors disabled:opacity-60"
               >
