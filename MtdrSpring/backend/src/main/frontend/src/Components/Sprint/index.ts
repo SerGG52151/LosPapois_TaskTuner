@@ -32,3 +32,9 @@ export type {
   TaskBoardMode,
   TaskState,
 } from './DeveloperTaskBoard';
+
+export { default as SprintProgressPieChart } from './SprintProgressPieChart';
+export type { SprintProgressPieChartProps } from './SprintProgressPieChart';
+
+export { default as ProjectProgressBox } from './ProjectProgressBox';
+export type { ProjectProgressBoxProps } from './ProjectProgressBox';
