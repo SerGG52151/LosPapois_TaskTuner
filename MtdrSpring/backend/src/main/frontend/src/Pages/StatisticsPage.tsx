@@ -557,6 +557,7 @@ export default function StatisticsPage() {
             </div>
           </div>
         </section>
+        </div>
 
         <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm shadow-gray-200/60">
           <h2 className="text-lg font-bold text-gray-800 mb-1">Bar Graph by Sprint</h2>
