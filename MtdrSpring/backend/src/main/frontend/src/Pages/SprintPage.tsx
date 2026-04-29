@@ -79,6 +79,7 @@ interface FeatureDTO {
   featureId: number;
   nameFeature: string;
   priorityFeature: string | null;
+  descriptionFeature: string | null;
   sprId: number;
 }
 
@@ -500,8 +501,7 @@ export default function SprintPage() {
         totalTasks: total,
         statusLabel: status.label,
         statusTone:  status.tone,
-        // Backend Feature has no description/long-text field today.
-        description: 'No description available.',
+        description: f.descriptionFeature?.trim() || 'No description available.',
         priority:     priorityLabel(f.priorityFeature),
         priorityTone: priorityToTone(f.priorityFeature),
         progress,
