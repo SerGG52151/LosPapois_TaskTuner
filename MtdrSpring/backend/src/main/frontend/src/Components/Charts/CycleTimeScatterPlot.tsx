@@ -71,6 +71,33 @@ function getProjectTaskName(task: ProjectTaskDTO | undefined, fallback: string):
   return name && name.length > 0 ? name : fallback;
 }
 
+function buildLaneLayout(sprints: SprintDTO[], points: CycleTimePoint[]) {
+  const pointsBySprintAndDay = new Map<number, Map<number, CycleTimePoint[]>>();
+
+  sprints.forEach(sprint => {
+    pointsBySprintAndDay.set(sprint.sprId, new Map<number, CycleTimePoint[]>());
+  });
+
+  points.forEach(point => {
+    const dayBuckets = pointsBySprintAndDay.get(point.sprintId);
+    if (!dayBuckets) return;
+    const dayPoints = dayBuckets.get(point.days) ?? [];
+    dayPoints.push(point);
+    dayBuckets.set(point.days, dayPoints);
+  });
+
+  const maxClusterSize = Math.max(
+    1,
+    ...Array.from(pointsBySprintAndDay.values()).flatMap(dayBuckets =>
+      Array.from(dayBuckets.values()).map(dayPoints => dayPoints.length)
+    )
+  );
+
+  const laneWidth = Math.max(156, 92 + maxClusterSize * 18);
+
+  return { laneWidth, pointsBySprintAndDay };
+}
+
 export default function CycleTimeScatterPlot({ projectId, className }: CycleTimeScatterPlotProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -163,15 +190,13 @@ export default function CycleTimeScatterPlot({ projectId, className }: CycleTime
   const yTicks = useMemo(() => buildYAxisTicks(maxDays), [maxDays]);
   const axisMax = yTicks[yTicks.length - 1] ?? maxDays;
   const hasPoints = points.length > 0;
-  const plotMinWidth = Math.max(760, 120 + sprints.length * 156);
-
-  const sprintLegends = useMemo(
-    () => sprints.map((sprint, index) => ({
-      sprint,
-      color: DOT_COLORS[index % DOT_COLORS.length],
-    })),
-    [sprints]
+  const { laneWidth, pointsBySprintAndDay } = useMemo(
+    () => buildLaneLayout(sprints, points),
+    [points, sprints]
   );
+
+  const plotWidth = Math.max(laneWidth * sprints.length, 1);
+  const plotMinWidth = Math.max(760, 100 + plotWidth);
 
   if (projectId == null || projectId < 0) {
     return null;
@@ -181,7 +206,7 @@ export default function CycleTimeScatterPlot({ projectId, className }: CycleTime
     <section className={className ?? 'bg-white border border-gray-200 rounded-xl p-6 shadow-sm shadow-gray-200/60'}>
       <h2 className="text-lg font-bold text-gray-800 mb-1">Cycle Time</h2>
       <p className="text-sm text-gray-500 mb-5">
-        X axis: Sprints. Y axis: whole days to complete a finished task, rounded up to a minimum of 1 day.
+        X axis: Sprints. Y axis: Days to Complete Task.
       </p>
 
       {loading ? (
@@ -227,31 +252,51 @@ export default function CycleTimeScatterPlot({ projectId, className }: CycleTime
                   })}
 
                   <div className="absolute inset-0 pl-3 pr-2">
-                    {points.map((point, pointIndex) => {
-                      const sprint = sprints[point.sprintIndex];
-                      if (!sprint) return null;
-
-                      const xPercent = sprints.length === 1
-                        ? 50
-                        : ((point.sprintIndex + 0.5) / sprints.length) * 100;
-                      const yPercent = axisMax > 0 ? (point.days / axisMax) * 100 : 0;
-                      const color = DOT_COLORS[pointIndex % DOT_COLORS.length];
-
+                    {sprints.map((sprint, sprintIndex) => {
+                      const left = sprintIndex * laneWidth + laneWidth / 2;
                       return (
-                        <button
-                          key={`${point.sprintId}-${point.taskName}-${pointIndex}`}
-                          type="button"
-                          title={`${point.taskName} · ${point.sprintName} · ${point.days} day${point.days === 1 ? '' : 's'}`}
-                          aria-label={`${point.taskName}, ${point.days} days, ${point.sprintName}`}
-                          className="absolute h-3.5 w-3.5 -translate-x-1/2 translate-y-1/2 rounded-full border border-white shadow-sm transition-transform duration-150 hover:scale-125 focus:scale-125 focus:outline-none"
-                          style={{
-                            left: `${xPercent}%`,
-                            bottom: `${Math.min(100, yPercent)}%`,
-                            backgroundColor: color,
-                            boxShadow: '0 1px 4px rgba(15, 23, 42, 0.22)',
-                          }}
+                        <div
+                          key={sprint.sprId}
+                          className="absolute top-0 bottom-0 border-l border-dashed border-gray-100"
+                          style={{ left: `${left}px` }}
                         />
                       );
+                    })}
+
+                    {sprints.map((sprint, sprintIndex) => {
+                      const dayBuckets = pointsBySprintAndDay.get(sprint.sprId);
+                      if (!dayBuckets) return null;
+
+                      const laneCenter = sprintIndex * laneWidth + laneWidth / 2;
+
+                      return Array.from(dayBuckets.entries()).map(([day, dayPoints]) => {
+                        const yPercent = axisMax > 0 ? (day / axisMax) * 100 : 0;
+                        const clusterSize = dayPoints.length;
+                        const spread = Math.min(36, Math.max(0, laneWidth * 0.34));
+                        const step = clusterSize > 1 ? Math.min(18, spread / (clusterSize - 1)) : 0;
+                        const startOffset = clusterSize > 1 ? -((clusterSize - 1) * step) / 2 : 0;
+
+                        return dayPoints.map((point, pointIndex) => {
+                          const xOffset = startOffset + pointIndex * step;
+                          const color = DOT_COLORS[(sprintIndex + pointIndex) % DOT_COLORS.length];
+
+                          return (
+                            <button
+                              key={`${point.sprintId}-${point.taskName}-${day}-${pointIndex}`}
+                              type="button"
+                              title={`${point.taskName} · ${point.sprintName} · ${point.days} day${point.days === 1 ? '' : 's'}`}
+                              aria-label={`${point.taskName}, ${point.days} days, ${point.sprintName}`}
+                              className="absolute h-3.5 w-3.5 -translate-x-1/2 translate-y-1/2 rounded-full border border-white shadow-sm transition-transform duration-150 hover:scale-125 focus:scale-125 focus:outline-none"
+                              style={{
+                                left: `${laneCenter + xOffset}px`,
+                                bottom: `${Math.min(100, yPercent)}%`,
+                                backgroundColor: color,
+                                boxShadow: '0 1px 4px rgba(15, 23, 42, 0.22)',
+                              }}
+                            />
+                          );
+                        });
+                      });
                     })}
                   </div>
 
@@ -274,14 +319,17 @@ export default function CycleTimeScatterPlot({ projectId, className }: CycleTime
               <div className="grid grid-cols-[64px_1fr] gap-3 mt-3">
                 <div aria-hidden="true" />
                 <div className="border-l border-transparent pl-3">
-                  <div className="flex justify-start gap-4">
+                  <div
+                    className="grid"
+                    style={{ gridTemplateColumns: `repeat(${sprints.length}, ${laneWidth}px)` }}
+                  >
                     {sprints.map((sprint, index) => (
                       <div
                         key={sprint.sprId}
-                        className="flex-none text-center"
+                        className="text-center"
                         style={{
-                          width: `${Math.max(120, 156 - 12)}px`,
-                          minWidth: `${Math.max(120, 156 - 12)}px`,
+                          width: `${laneWidth}px`,
+                          minWidth: `${laneWidth}px`,
                         }}
                       >
                         <span className="inline-block text-xs font-medium text-gray-600 leading-tight">
@@ -292,22 +340,6 @@ export default function CycleTimeScatterPlot({ projectId, className }: CycleTime
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="pt-1 border-t border-gray-100">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">Legend</h3>
-            <div className="flex flex-wrap gap-3">
-              {sprintLegends.map(({ sprint, color }) => (
-                <div key={sprint.sprId} className="inline-flex items-center gap-2 text-sm text-gray-700">
-                  <span
-                    className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: color }}
-                    aria-hidden="true"
-                  />
-                  <span>{sprint.nameSprint}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
