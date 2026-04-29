@@ -66,4 +66,8 @@ public interface UserTTRepository extends JpaRepository<UserTT, Long> {
      * Use case: account lookup for login or password reset flows.
      */
     Optional<UserTT> findByMail(String mail);
+
+    boolean existsByMailIgnoreCase(String mail);
+
+    boolean existsByIdTelegramIgnoreCase(String idTelegram);
 }

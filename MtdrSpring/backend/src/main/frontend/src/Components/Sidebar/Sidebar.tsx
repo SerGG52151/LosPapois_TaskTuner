@@ -81,9 +81,9 @@ function Sidebar({ isOpen }: SidebarProps) {
     fetch('/api/projects')
       .then(res => (res.ok ? res.json() : null))
       .then((data: ProjectDTO[] | null) => {
-        if (cancelled || !data || data.length === 0) return;
+        if (cancelled || data === null) return; // Allow empty arrays, reject null (network error)
         setProjects(data);
-        saveToStorage(STORAGE_KEYS.PROJECTS, data);
+        saveToStorage(STORAGE_KEYS.PROJECTS, data); // Cache even empty arrays to reflect DB state
       })
       .catch(() => {
         /* Keep current projects (cache or mock) if network fails — graceful degradation. */

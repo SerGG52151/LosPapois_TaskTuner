@@ -2,6 +2,7 @@ package com.springboot.MyTodoList.util;
 
 public class BotTaskDraft {
     private String name;
+    private String description;
     private Integer storyPoints;
     private String priority;
     private Long taskId;
@@ -12,6 +13,9 @@ public class BotTaskDraft {
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
     public Integer getStoryPoints() { return storyPoints; }
     public void setStoryPoints(Integer storyPoints) { this.storyPoints = storyPoints; }
