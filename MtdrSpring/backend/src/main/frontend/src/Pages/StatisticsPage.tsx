@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import PageLoading from '../Components/Common/PageLoading';
 import { SprintProgressPieChart, ProjectProgressBox } from '../Components/Sprint';
+import CycleTimeScatterPlot from '../Components/Charts/CycleTimeScatterPlot';
 import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface ProjectDTO {
@@ -461,6 +462,7 @@ export default function StatisticsPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
             <label className="block">
               <span className="text-sm font-semibold text-gray-700 inline-flex items-center gap-1.5 mb-2">
                 <UserGroupIcon className="h-4 w-4" aria-hidden="true" />
@@ -543,7 +545,7 @@ export default function StatisticsPage() {
               </select>
             </label>
 
-            <div className="flex items-end">
+            <div className="flex items-center translate-y-0.5">
               <button
                 type="button"
                 onClick={handleApply}
@@ -559,7 +561,7 @@ export default function StatisticsPage() {
         <section className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm shadow-gray-200/60">
           <h2 className="text-lg font-bold text-gray-800 mb-1">Bar Graph by Sprint</h2>
           <p className="text-sm text-gray-500 mb-5">
-            X axis: Sprints. Y axis: {METRIC_LABEL[appliedMetric]} for selected members.
+            X axis: Sprints. Y axis: {METRIC_LABEL[appliedMetric]}.
           </p>
 
           {sprints.length === 0 ? (
@@ -706,8 +708,8 @@ export default function StatisticsPage() {
               </div>
             </div>
           )}
-          </section>
-        </div>
+        </section>
+        <CycleTimeScatterPlot projectId={projectId} />
       </div>
     </div>
   );
