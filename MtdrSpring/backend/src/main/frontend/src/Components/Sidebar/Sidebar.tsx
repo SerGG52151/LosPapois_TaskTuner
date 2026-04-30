@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  ArchiveBoxIcon,
   ArrowRightStartOnRectangleIcon,
   PlusIcon,
   UserCircleIcon,
@@ -73,8 +74,10 @@ function Sidebar({ isOpen }: SidebarProps) {
 
   useEffect(() => {
     let cancelled = false;
-    // /api/projects (no /open) returns ALL projects, including closed ones.
-    // The sidebar shows everything so archived/closed projects stay reachable.
+    // /api/projects returns ALL projects (active + finalized). We keep the
+    // full list in cache so other pages (HomePage, ArchivedProjectsPage,
+    // StatisticsPage) can read from a single source, then filter for the
+    // sidebar separately to keep the nav focused on active work.
     fetch('/api/projects')
       .then(res => (res.ok ? res.json() : null))
       .then((data: ProjectDTO[] | null) => {
@@ -89,6 +92,15 @@ function Sidebar({ isOpen }: SidebarProps) {
       cancelled = true;
     };
   }, []);
+
+  // Sidebar only lists active projects — finalized ones live behind the
+  // dedicated /archive entry so the active workspace stays uncluttered.
+  // Mock projects (negative pjId, no end date) are kept visible so the
+  // offline preview still works.
+  const activeProjects = useMemo(
+    () => projects.filter(p => p.dateEndRealPj == null || p.dateEndRealPj === ''),
+    [projects]
+  );
 
   const handleSignOut = useCallback(() => {
     removeFromStorage(STORAGE_KEYS.AUTH_TOKEN);
@@ -248,10 +260,10 @@ function Sidebar({ isOpen }: SidebarProps) {
             <span className="truncate">Add Project</span>
           </button>
 
-          {projects.length === 0 ? (
-            <p className="px-3 py-2 text-sm text-gray-400">No projects yet</p>
+          {activeProjects.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-gray-400">No active projects</p>
           ) : (
-            projects.map((p, idx) => (
+            activeProjects.map((p, idx) => (
               <SidebarProjectGroup
                 key={p.pjId}
                 projectId={p.pjId}
@@ -267,6 +279,7 @@ function Sidebar({ isOpen }: SidebarProps) {
         </nav>
 
         <div className="px-3 py-3 border-t border-gray-100 space-y-1">
+          <SidebarItem icon={ArchiveBoxIcon} label="Archive" to="/archive" />
           <SidebarItem icon={UserCircleIcon} label="Profile" to="/profile" />
           <SidebarItem
             icon={ArrowRightStartOnRectangleIcon}
