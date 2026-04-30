@@ -1,5 +1,10 @@
 package com.springboot.MyTodoList.controller;
 
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,7 +13,6 @@ import org.telegram.telegrambots.longpolling.BotSession;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.longpolling.starter.AfterBotRegistration;
 import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
-import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.AnswerCallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -28,9 +32,14 @@ import com.springboot.MyTodoList.service.UserTTService;
 import com.springboot.MyTodoList.util.BotActions;
 
 @Component
-public class ToDoItemBotController implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
+public class ToDoItemBotController implements SpringLongPollingBot, LongPollingUpdateConsumer {
 
     private static final Logger logger = LoggerFactory.getLogger(ToDoItemBotController.class);
+
+    // One single-threaded executor per chatId:
+    //   - Messages from the same chat are processed in order (no state corruption)
+    //   - Messages from different chats run in parallel (no blocking between users)
+    private final ConcurrentHashMap<Long, ExecutorService> chatExecutors = new ConcurrentHashMap<>();
     private final ToDoItemService toDoItemService;
     private final DeepSeekService deepSeekService;
     private final GroqService groqService;
@@ -81,8 +90,39 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
     }
 
     @Override
-    public void consume(Update update) {
+    public void consume(List<Update> updates) {
+        for (Update update : updates) {
+            dispatchUpdate(update);
+        }
+    }
 
+    /**
+     * Routes each update to the per-chat executor.
+     * Same chat → sequential (preserves conversation state order).
+     * Different chats → parallel (users don't block each other).
+     */
+    private void dispatchUpdate(Update update) {
+        long chatId;
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            chatId = update.getMessage().getChatId();
+        } else if (update.hasCallbackQuery()) {
+            chatId = update.getCallbackQuery().getMessage().getChatId();
+        } else {
+            return;
+        }
+
+        ExecutorService executor = chatExecutors.computeIfAbsent(
+            chatId, id -> Executors.newSingleThreadExecutor(r -> {
+                Thread t = new Thread(r, "bot-chat-" + id);
+                t.setDaemon(true);
+                return t;
+            })
+        );
+
+        executor.submit(() -> processUpdate(update));
+    }
+
+    private void processUpdate(Update update) {
         String messageFromTelegram;
         long chatId;
         String username;
@@ -108,11 +148,11 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
                 logger.error(e.getLocalizedMessage(), e);
             }
         } else {
-          return;
-		    }
+            return;
+        }
 
-        String telegramIdentity = (username != null && !username.trim().isEmpty()) 
-        ? "@" + username : String.valueOf(chatId);
+        String telegramIdentity = (username != null && !username.trim().isEmpty())
+                ? "@" + username : String.valueOf(chatId);
 
         BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService,
                 groqService,
@@ -148,9 +188,9 @@ public class ToDoItemBotController implements SpringLongPollingBot, LongPollingS
         actions.fnAddFeature();
         actions.fnAiCreate();
         actions.fnAsk();
+        actions.fnImportTasks();
         actions.fnLLM();
         actions.fnElse();
-
     }
 
     @AfterBotRegistration

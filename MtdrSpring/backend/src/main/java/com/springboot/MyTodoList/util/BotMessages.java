@@ -49,7 +49,16 @@ public enum BotMessages {
 	AI_CREATE_FEATURE_CONFIRM("✅ I'll create this feature:\n%s\nSelect priority below (or cancel):"),
 	AI_CREATE_UNKNOWN("❓ I could not understand what to create. Try again or use the manual buttons."),
 	AI_CREATE_CONFIRMED("✅ Created! Now select the sprint:"),
-	AI_CREATE_CANCELLED("❌ Creation cancelled.");
+	AI_CREATE_CANCELLED("❌ Creation cancelled."),
+	IMPORT_PROMPT("📋 Paste your document text below and I'll extract the tasks automatically:"),
+	IMPORT_PARSING("🤔 Extracting tasks from your text..."),
+	IMPORT_NO_TASKS("❓ No tasks found in the text. Try again with more detail or create tasks manually."),
+	IMPORT_PARSE_ERROR("❌ Failed to parse tasks. Try again or create tasks manually."),
+	IMPORT_SELECT_SPRINT("Select the sprint for all imported tasks:"),
+	IMPORT_SELECT_FEATURE("Select the feature for all imported tasks:"),
+	IMPORT_CONFIRM("📋 Found *%d task(s)*:\n\n%s\nCreate all in the selected sprint and feature?"),
+	IMPORT_SUCCESS("✅ Successfully created %d task(s)!"),
+	IMPORT_CANCELLED("❌ Import cancelled.");
 
 	private String message;
 

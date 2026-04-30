@@ -48,6 +48,7 @@ public class BotActions {
     private static final Map<Long, BotRegistrationDraft> registrationDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, BotTaskDraft> taskDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, BotFeatureDraft> featureDrafts = new ConcurrentHashMap<>();
+    private static final Map<Long, BotImportDraft> importDrafts = new ConcurrentHashMap<>();
     private static final Map<Long, UserTT> authenticatedUsers = new ConcurrentHashMap<>();
 
     String requestText;
@@ -120,6 +121,7 @@ public class BotActions {
         registrationDrafts.remove(chatId);
         taskDrafts.remove(chatId);
         featureDrafts.remove(chatId);
+        importDrafts.remove(chatId);
     }
 
     private boolean isValidEmail(String email) {
@@ -266,6 +268,12 @@ public class BotActions {
                 InlineKeyboardButton.builder()
                     .text("🤖 Ask AI")
                     .callbackData(BotCommands.ASK_COMMAND.getCommand())
+                    .build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("📥 Import Tasks from Text")
+                    .callbackData(BotCommands.IMPORT_TASKS.getCommand())
                     .build()
             ))
             .keyboardRow(new InlineKeyboardRow(
@@ -470,6 +478,10 @@ public class BotActions {
             case WAITING_EDIT_FEATURE_NEW_SPRINT:        handleEditFeatureNewSprint();        break;
             case WAITING_AI_QUESTION:               handleAiQuestion();              break;
             case WAITING_AI_CREATE_DESCRIPTION:     handleAiCreateDescription();     break;
+            case WAITING_IMPORT_TEXT:               handleImportText();              break;
+            case WAITING_IMPORT_SPRINT:             handleImportSprint();            break;
+            case WAITING_IMPORT_FEATURE:            handleImportFeature();           break;
+            case WAITING_IMPORT_CONFIRM:            handleImportConfirm();           break;
             default: break;
         }
     }
@@ -2335,6 +2347,340 @@ public class BotActions {
             showMainMenu();
         }
         exit = true;
+    }
+
+    // ─── Bulk import (paste text) ─────────────────────────────────────────
+
+    private static final String IMPORT_SYSTEM_PROMPT =
+        "You are a task extractor for a project management system.\n"
+        + "Extract ALL tasks, action items, or work items from the provided text.\n"
+        + "Return ONLY a valid JSON array on one line with no extra text or markdown:\n"
+        + "[{\"name\":\"...\",\"description\":\"...\",\"storyPoints\":N,\"priority\":\"HIGH\"|\"MEDIUM\"|\"LOW\"}]\n"
+        + "Rules:\n"
+        + "- name: short task title, max 80 chars\n"
+        + "- description: one-sentence summary; empty string \"\" if not clear\n"
+        + "- storyPoints: integer 1-20, estimate from complexity hints; default 3\n"
+        + "- priority: infer from urgency words; default MEDIUM\n"
+        + "- If no tasks found, return []\n"
+        + "- Do NOT wrap in code blocks or add any text outside the JSON array";
+
+    /** Entry point for the '📥 Import Tasks from Text' button. */
+    public void fnImportTasks() {
+        if (exit) return;
+        if (!isUserAuthenticated()) {
+            BotHelper.sendMessageToTelegram(chatId, "❌ You must log in first. Use /login", telegramClient, null);
+            exit = true;
+            return;
+        }
+        if (!requestText.trim().equals(BotCommands.IMPORT_TASKS.getCommand())) return;
+
+        if (groqService == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ASK_AI_DISABLED.getMessage(), telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        setCurrentState(BotConversationState.WAITING_IMPORT_TEXT);
+        BotHelper.sendPromptWithCancel(chatId, BotMessages.IMPORT_PROMPT.getMessage(), telegramClient);
+        exit = true;
+    }
+
+    /** User pasted the document text — call Groq, parse tasks, go to sprint selection. */
+    private void handleImportText() {
+        if (groqService == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ASK_AI_DISABLED.getMessage(), telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        String sanitized = groqService.sanitizeBulk(requestText);
+        if (sanitized == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ASK_AI_EMPTY_QUESTION.getMessage(), telegramClient, null);
+            exit = true;
+            return;
+        }
+
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.IMPORT_PARSING.getMessage(), telegramClient, null);
+
+        String aiResponse;
+        try {
+            aiResponse = groqService.askBulk(IMPORT_SYSTEM_PROMPT, sanitized);
+        } catch (Exception e) {
+            logger.error("Groq bulk import failed: {}", e.getMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.IMPORT_PARSE_ERROR.getMessage(), telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        // Extract JSON array from response — model may add surrounding text
+        String jsonStr = extractJsonArray(aiResponse);
+        if (jsonStr == null) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.IMPORT_NO_TASKS.getMessage(), telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        try {
+            com.fasterxml.jackson.databind.JsonNode arr = JSON_MAPPER.readTree(jsonStr);
+            if (!arr.isArray() || arr.size() == 0) {
+                BotHelper.sendMessageToTelegram(chatId, BotMessages.IMPORT_NO_TASKS.getMessage(), telegramClient, null);
+                clearConversationState();
+                showMainMenu();
+                exit = true;
+                return;
+            }
+
+            List<BotImportDraft.ParsedTask> tasks = new ArrayList<>();
+            for (com.fasterxml.jackson.databind.JsonNode node : arr) {
+                BotImportDraft.ParsedTask t = new BotImportDraft.ParsedTask();
+                t.name        = node.path("name").asText("Unnamed task");
+                t.description = node.path("description").asText("");
+                t.storyPoints = Math.max(1, Math.min(20, node.path("storyPoints").asInt(3)));
+                String prio   = node.path("priority").asText("MEDIUM").toUpperCase();
+                t.priority    = (prio.equals("HIGH") || prio.equals("LOW")) ? prio : "MEDIUM";
+                tasks.add(t);
+            }
+
+            BotImportDraft draft = new BotImportDraft();
+            draft.setTasks(tasks);
+            importDrafts.put(chatId, draft);
+
+            setCurrentState(BotConversationState.WAITING_IMPORT_SPRINT);
+            BotHelper.sendMessageToTelegram(chatId,
+                "✅ Found " + tasks.size() + " task(s). Now select the sprint:",
+                telegramClient, null);
+            showSprintSelectionForImport();
+
+        } catch (Exception e) {
+            logger.error("Failed to parse import JSON: {}", e.getMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.IMPORT_PARSE_ERROR.getMessage(), telegramClient, null);
+            clearConversationState();
+            showMainMenu();
+        }
+        exit = true;
+    }
+
+    private void showSprintSelectionForImport() {
+        List<SprintTT> available = getAvailableSprints();
+        if (available.isEmpty()) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId,
+                "⚠️ You have no active project or sprint assigned. Contact your manager.",
+                telegramClient, null);
+            showMainMenu();
+            return;
+        }
+        var builder = InlineKeyboardMarkup.builder();
+        for (SprintTT sprint : available) {
+            String stateTag = sprintStateTag(sprint);
+            String label = sprint.getNameSprint() + stateTag
+                + " (" + sprint.getDateStartSpr() + " → " + sprint.getDateEndSpr() + ")";
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text(label)
+                    .callbackData("IMPORT_SPRINT:" + sprint.getSprId())
+                    .build()
+            ));
+        }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
+        BotHelper.sendMessageToTelegramButtons(
+            chatId, BotMessages.IMPORT_SELECT_SPRINT.getMessage(), telegramClient, builder.build());
+    }
+
+    private void handleImportSprint() {
+        if (!requestText.startsWith("IMPORT_SPRINT:")) {
+            showSprintSelectionForImport();
+            exit = true;
+            return;
+        }
+        long sprintId;
+        try {
+            sprintId = Long.parseLong(requestText.substring(14));
+        } catch (NumberFormatException e) {
+            showSprintSelectionForImport();
+            exit = true;
+            return;
+        }
+
+        BotImportDraft draft = importDrafts.get(chatId);
+        if (draft == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Session expired. Start over with Import Tasks.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
+        draft.setSprintId(sprintId);
+
+        setCurrentState(BotConversationState.WAITING_IMPORT_FEATURE);
+        showFeatureSelectionForImport(sprintId);
+        exit = true;
+    }
+
+    private void showFeatureSelectionForImport(long sprintId) {
+        List<FeatureTT> features = featureTTService.getFeaturesBySprint(sprintId);
+        if (features.isEmpty()) {
+            importDrafts.remove(chatId);
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId,
+                "⚠️ This sprint has no features. Create a feature first before importing tasks.",
+                telegramClient, null);
+            showMainMenu();
+            return;
+        }
+        var builder = InlineKeyboardMarkup.builder();
+        for (FeatureTT f : features) {
+            builder.keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("🗂 " + f.getNameFeature())
+                    .callbackData("IMPORT_FEATURE:" + f.getFeatureId())
+                    .build()
+            ));
+        }
+        builder.keyboardRow(new InlineKeyboardRow(
+            InlineKeyboardButton.builder().text("❌ Cancel").callbackData("CANCEL").build()
+        ));
+        BotHelper.sendMessageToTelegramButtons(
+            chatId, BotMessages.IMPORT_SELECT_FEATURE.getMessage(), telegramClient, builder.build());
+    }
+
+    private void handleImportFeature() {
+        if (!requestText.startsWith("IMPORT_FEATURE:")) {
+            BotImportDraft draft = importDrafts.get(chatId);
+            if (draft != null) showFeatureSelectionForImport(draft.getSprintId());
+            exit = true;
+            return;
+        }
+        long featureId;
+        try {
+            featureId = Long.parseLong(requestText.substring(15));
+        } catch (NumberFormatException e) {
+            BotImportDraft draft = importDrafts.get(chatId);
+            if (draft != null) showFeatureSelectionForImport(draft.getSprintId());
+            exit = true;
+            return;
+        }
+
+        BotImportDraft draft = importDrafts.get(chatId);
+        if (draft == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Session expired. Start over with Import Tasks.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
+        draft.setFeatureId(featureId);
+
+        // Build preview and ask for confirmation
+        StringBuilder preview = new StringBuilder();
+        List<BotImportDraft.ParsedTask> tasks = draft.getTasks();
+        for (int i = 0; i < tasks.size(); i++) {
+            BotImportDraft.ParsedTask t = tasks.get(i);
+            preview.append(i + 1).append(". ")
+                .append(prioEmoji(t.priority.toLowerCase())).append(" *").append(t.name).append("*")
+                .append(" (").append(t.storyPoints).append(" SP)\n");
+            if (t.description != null && !t.description.isBlank()) {
+                preview.append("   _").append(t.description).append("_\n");
+            }
+        }
+
+        String confirmMsg = String.format(BotMessages.IMPORT_CONFIRM.getMessage(), tasks.size(), preview.toString());
+        InlineKeyboardMarkup keyboard = InlineKeyboardMarkup.builder()
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("✅ Create " + tasks.size() + " Task(s)")
+                    .callbackData("IMPORT_CONFIRM:YES")
+                    .build()
+            ))
+            .keyboardRow(new InlineKeyboardRow(
+                InlineKeyboardButton.builder()
+                    .text("❌ Cancel")
+                    .callbackData("CANCEL")
+                    .build()
+            ))
+            .build();
+
+        setCurrentState(BotConversationState.WAITING_IMPORT_CONFIRM);
+        BotHelper.sendMessageToTelegramButtons(chatId, confirmMsg, telegramClient, keyboard);
+        exit = true;
+    }
+
+    private void handleImportConfirm() {
+        if (!requestText.equals("IMPORT_CONFIRM:YES")) {
+            // Any other input — re-show the confirm buttons
+            exit = true;
+            return;
+        }
+
+        BotImportDraft draft = importDrafts.get(chatId);
+        if (draft == null || draft.getTasks() == null || draft.getTasks().isEmpty()) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Session expired. Start over with Import Tasks.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        SprintTT sprint = sprintTTService.getSprintById(draft.getSprintId()).getBody();
+        if (sprint == null) {
+            clearConversationState();
+            BotHelper.sendMessageToTelegram(chatId, "Sprint not found. Try importing again.", telegramClient, null);
+            showMainMenu();
+            exit = true;
+            return;
+        }
+
+        UserTT currentUser = getAuthenticatedUser();
+        LocalDate startDate = "active".equals(sprint.getStateSprint())
+            ? LocalDate.now()
+            : sprint.getDateStartSpr();
+
+        int created = 0;
+        for (BotImportDraft.ParsedTask pt : draft.getTasks()) {
+            try {
+                TaskTT task = new TaskTT();
+                task.setNameTask(pt.name);
+                task.setInfoTask(pt.description != null && !pt.description.isBlank() ? pt.description : null);
+                task.setStoryPoints(pt.storyPoints);
+                task.setDateStartTask(startDate);
+                task.setDateEndSetTask(sprint.getDateEndSpr());
+                task.setPriority(pt.priority.toLowerCase());
+                task.setUserId(currentUser.getUserId());
+                task.setFeatureId(draft.getFeatureId());
+
+                TaskTT saved = taskTTService.addTask(task);
+                if (saved != null) {
+                    sprintTaskTTService.addTaskToSprint(draft.getSprintId(), saved.getTaskId());
+                    created++;
+                }
+            } catch (Exception e) {
+                logger.error("Failed to create imported task '{}': {}", pt.name, e.getMessage(), e);
+            }
+        }
+
+        clearConversationState();
+        BotHelper.sendMessageToTelegram(chatId,
+            String.format(BotMessages.IMPORT_SUCCESS.getMessage(), created),
+            telegramClient, null);
+        showMainMenu();
+        exit = true;
+    }
+
+    /** Extract first JSON array [...] from AI response text. */
+    private String extractJsonArray(String text) {
+        if (text == null) return null;
+        int start = text.indexOf('[');
+        int end   = text.lastIndexOf(']');
+        if (start == -1 || end == -1 || end <= start) return null;
+        return text.substring(start, end + 1);
     }
 
     /**
