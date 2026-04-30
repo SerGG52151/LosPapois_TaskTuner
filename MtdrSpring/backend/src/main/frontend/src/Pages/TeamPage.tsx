@@ -14,16 +14,19 @@ import {
   MemberDetailPanel,
   MemberListItem,
 } from '../Components/Team';
+import AddOrSelectTeamMemberModal from '../Components/Team/AddOrSelectTeamMemberModal';
 import type {
   NewTeamMemberData,
   AvatarTone,
   MemberTaskLite,
   MemberTaskPriority,
+  ExistingUser,
 } from '../Components/Team';
 import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 import TaskDetailModal from '../Components/Common/TaskDetailModal';
 import type { TaskDetailData } from '../Components/Common/TaskDetailModal';
 import PageLoading from '../Components/Common/PageLoading';
+import useProjectKpis from '../Hooks/useProjectKpis';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock data — visual-only until the team / KPI endpoints are wired.
@@ -35,6 +38,18 @@ import PageLoading from '../Components/Common/PageLoading';
 interface ProjectDTO {
   pjId: number;
   namePj: string;
+  /**
+   * Planned end date — used to compute the "Project Delay" KPI (today vs
+   * dateEndSetPj when active, dateEndRealPj vs dateEndSetPj when closed).
+   */
+  dateEndSetPj?: string | null;
+  /**
+   * Real end date — null/empty means the project is still active.
+   * Used to scope the "user can only be in one active project at a time"
+   * rule to active projects only, and to anchor the Project Delay KPI when
+   * the project is finalized.
+   */
+  dateEndRealPj?: string | null;
 }
 
 /** Backend ProjectUserTT shape — composite key (pjId, userId). */
@@ -205,16 +220,7 @@ const EMPTY_MEMBER_KPIS: MemberKpis = {
   progress: '—',
 };
 
-const PROJECT_KPIS = {
-  avgProgress: 50,
-  carryRate: 0,
-  taskDelay: 0,
-  cycleTime: '2.9 days',
-  projectDelay: '0 days',
-  expectedDate: '14/6/2026',
-  sprintsCount: 3,
-  delayedTasks: 0,
-};
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inline visualizations — kept here because they're throwaway shapes specific
@@ -287,6 +293,16 @@ export default function TeamPage() {
   // All features across the system — used to map featureId → name when
   // showing "Features Asignadas" inside the member detail panel.
   const [allFeatures, setAllFeatures] = useState<FeatureDTO[]>([]);
+
+  // All users in the system — used to populate the "Add Existing User" dropdown
+  const [allUsers, setAllUsers] = useState<UserDTO[]>([]);
+
+  // Cross-project membership snapshot — needed to enforce the "a user can
+  // only belong to one active project at a time" rule. Both pieces are
+  // refreshed alongside membersRefreshToken so the modal sees up-to-date
+  // assignments after every add/remove.
+  const [allProjects, setAllProjects] = useState<ProjectDTO[]>([]);
+  const [allMemberships, setAllMemberships] = useState<MembershipDTO[]>([]);
 
   // Selection is nullable so we can render an empty state when no members.
   const [selectedId, setSelectedId] = useState<number | null>(
@@ -413,6 +429,143 @@ export default function TeamPage() {
     };
   }, []);
 
+  // Fetch all users for the "Add Existing User" modal dropdown
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/users-tt')
+      .then(r => (r.ok ? r.json() : []))
+      .then((data: UserDTO[]) => {
+        if (cancelled) return;
+        setAllUsers(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Fetch all projects + all memberships so the "Add Existing User" modal
+  // can warn when a candidate is already in another active project.
+  // Tied to membersRefreshToken so the snapshot stays fresh after the
+  // current page itself adds or removes a member.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      fetch('/api/projects')
+        .then(r => (r.ok ? r.json() : []))
+        .catch(() => []),
+      fetch('/api/project-memberships')
+        .then(r => (r.ok ? r.json() : []))
+        .catch(() => []),
+    ]).then(([projects, memberships]: [ProjectDTO[], MembershipDTO[]]) => {
+      if (cancelled) return;
+      setAllProjects(projects ?? []);
+      setAllMemberships(memberships ?? []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [membersRefreshToken]);
+
+  // userId → name of the OTHER active project the user is already on.
+  // Built fresh from the latest memberships + projects snapshot.
+  // Active = dateEndRealPj is null/empty. The current project is excluded
+  // because users in it are already filtered out via currentTeamMemberIds.
+  const blockedUsersByActiveProject = useMemo(() => {
+    const map = new Map<number, string>();
+    if (projectId == null) return map;
+
+    const activeProjectsById = new Map<number, ProjectDTO>();
+    for (const p of allProjects) {
+      const isActive = p.dateEndRealPj == null || p.dateEndRealPj === '';
+      if (isActive && p.pjId !== projectId) {
+        activeProjectsById.set(p.pjId, p);
+      }
+    }
+
+    for (const m of allMemberships) {
+      const proj = activeProjectsById.get(m.pjId);
+      if (proj && !map.has(m.userId)) {
+        map.set(m.userId, proj.namePj);
+      }
+    }
+    return map;
+  }, [allProjects, allMemberships, projectId]);
+
+  // ─── Project-level KPIs ────────────────────────────────────────────────
+  // Source of truth for the "Average Project KPIs" section. The hook hits
+  // /api/projects/{pjId}/kpis/{velocity,retrabajo,completitud}. Cycle time
+  // and project delay aren't backend KPIs (yet) so we compute them client-
+  // side from data the page already loads (allTasks + allProjects).
+  const projectKpis = useProjectKpis(projectId);
+
+  /** Average days from dateStartTask → dateEndRealTask across this project's
+   *  finished tasks. Returns null when no task has both dates filled. */
+  const avgCycleTimeDays = useMemo<number | null>(() => {
+    if (projectId == null || projectId < 0) return null;
+    const finished = allTasks.filter(
+      t => t.pjId === projectId && t.dateStartTask && t.dateEndRealTask
+    );
+    if (finished.length === 0) return null;
+
+    const totalDays = finished.reduce((sum, t) => {
+      const start = new Date(t.dateStartTask!).getTime();
+      const end = new Date(t.dateEndRealTask!).getTime();
+      if (Number.isNaN(start) || Number.isNaN(end)) return sum;
+      const days = (end - start) / (1000 * 60 * 60 * 24);
+      // Clamp negatives in case of clock skew or out-of-order dates.
+      return sum + Math.max(0, days);
+    }, 0);
+
+    return totalDays / finished.length;
+  }, [allTasks, projectId]);
+
+  /** Project delay relative to its planned end date. Positive = late, zero or
+   *  negative = on track. When the project is finalized we anchor against
+   *  dateEndRealPj; otherwise we compare against today. */
+  const projectDelayInfo = useMemo<{
+    days: number;
+    label: string;
+    expectedDate: string | null;
+    tone: 'success' | 'warning' | 'danger';
+  } | null>(() => {
+    if (projectId == null || projectId < 0) return null;
+    const project = allProjects.find(p => p.pjId === projectId);
+    if (!project?.dateEndSetPj) return null;
+
+    const expected = new Date(project.dateEndSetPj);
+    if (Number.isNaN(expected.getTime())) return null;
+
+    const reference = project.dateEndRealPj
+      ? new Date(project.dateEndRealPj)
+      : new Date();
+    if (Number.isNaN(reference.getTime())) return null;
+
+    const diffMs = reference.getTime() - expected.getTime();
+    const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+    const expectedFormatted = expected.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    if (days <= 0) {
+      return {
+        days: 0,
+        label: 'On track',
+        expectedDate: expectedFormatted,
+        tone: 'success',
+      };
+    }
+    return {
+      days,
+      label: `${days} day${days === 1 ? '' : 's'} late`,
+      expectedDate: expectedFormatted,
+      tone: days > 7 ? 'danger' : 'warning',
+    };
+  }, [allProjects, projectId]);
+
   const isPageLoading =
     projectId != null
     && projectId >= 0
@@ -423,6 +576,12 @@ export default function TeamPage() {
     () =>
       projectId != null ? allTasks.filter(t => t.pjId === projectId) : [],
     [allTasks, projectId]
+  );
+
+  // Current team member IDs for filtering in the "Add Existing User" modal
+  const currentTeamMemberIds = useMemo(
+    () => new Set(members.map(m => m.id)),
+    [members]
   );
 
   // Resolve the project name from the cached project list (filled by the
@@ -513,7 +672,7 @@ export default function TeamPage() {
     setIsAddMemberModalOpen(false);
   };
 
-  const handleConfirmAddMember = async (data: NewTeamMemberData) => {
+  const handleConfirmAddNewMember = async (data: NewTeamMemberData) => {
     if (projectId == null || projectId < 0) {
       setAddMemberError('Cannot add members to demo projects.');
       return;
@@ -523,6 +682,41 @@ export default function TeamPage() {
     setAddMemberError(null);
 
     try {
+      // Check for duplicate email or telegram in existing users
+      const emailLower = data.mail.trim().toLowerCase();
+      const telegramLower = data.idTelegram.trim().toLowerCase();
+
+      const duplicateEmail = allUsers.find(
+        u => u.mail && u.mail.toLowerCase() === emailLower
+      );
+      const duplicateTelegram = allUsers.find(
+        u => u.idTelegram.toLowerCase() === telegramLower
+      );
+
+      if (duplicateEmail && duplicateTelegram) {
+        setAddMemberError(
+          `Email and Telegram ID are already registered. User: ${duplicateEmail.nameUser}`
+        );
+        setAddMemberSubmitting(false);
+        return;
+      }
+
+      if (duplicateEmail) {
+        setAddMemberError(
+          `Email is already registered to user: ${duplicateEmail.nameUser}`
+        );
+        setAddMemberSubmitting(false);
+        return;
+      }
+
+      if (duplicateTelegram) {
+        setAddMemberError(
+          `Telegram ID is already registered to user: ${duplicateTelegram.nameUser}`
+        );
+        setAddMemberSubmitting(false);
+        return;
+      }
+
       const newUserPayload = {
         nameUser: data.nameUser,
         password: null,
@@ -555,6 +749,45 @@ export default function TeamPage() {
     } catch (error) {
       console.error('[TeamPage] add member failed', error);
       setAddMemberError('Could not add the new team member. Please check the data and try again.');
+    } finally {
+      setAddMemberSubmitting(false);
+    }
+  };
+
+  const handleConfirmAddExistingMember = async (userId: number) => {
+    if (projectId == null || projectId < 0) {
+      setAddMemberError('Cannot add members to demo projects.');
+      return;
+    }
+
+    // Defense-in-depth: even though the modal disables blocked users, we
+    // re-check here in case the snapshot changed between render and submit
+    // (e.g. another tab added the user to a different project meanwhile).
+    const blockingProject = blockedUsersByActiveProject.get(userId);
+    if (blockingProject) {
+      setAddMemberError(
+        `This user is already assigned to "${blockingProject}". A user can only belong to one active project at a time.`
+      );
+      return;
+    }
+
+    setAddMemberSubmitting(true);
+    setAddMemberError(null);
+
+    try {
+      const membershipResponse = await fetch(
+        `/api/project-memberships?pjId=${projectId}&userId=${userId}`,
+        { method: 'POST' }
+      );
+      if (!membershipResponse.ok) {
+        throw new Error(`Failed to add project membership (${membershipResponse.status})`);
+      }
+
+      setIsAddMemberModalOpen(false);
+      setMembersRefreshToken(t => t + 1);
+    } catch (error) {
+      console.error('[TeamPage] add existing member failed', error);
+      setAddMemberError('Could not add the user to the team. They may already be a member.');
     } finally {
       setAddMemberSubmitting(false);
     }
@@ -658,10 +891,20 @@ export default function TeamPage() {
         onClose={() => setSelectedTaskForModal(null)}
         task={selectedTaskForModal}
       />
-      <AddTeamMemberModal
+      <AddOrSelectTeamMemberModal
         isOpen={isAddMemberModalOpen}
         onClose={handleCloseAddMember}
-        onConfirm={handleConfirmAddMember}
+        onConfirmNew={handleConfirmAddNewMember}
+        onConfirmExisting={handleConfirmAddExistingMember}
+        existingUsers={allUsers.map(u => ({
+          userId: u.userId,
+          nameUser: u.nameUser,
+          mail: u.mail ?? undefined,
+          idTelegram: u.idTelegram,
+          role: u.role,
+        }))}
+        currentTeamMemberIds={currentTeamMemberIds}
+        blockedUsersByActiveProject={blockedUsersByActiveProject}
         submitting={addMemberSubmitting}
         error={addMemberError}
       />
@@ -720,55 +963,108 @@ export default function TeamPage() {
             <span className="h-5 w-1 bg-brand rounded-full" aria-hidden="true" />
             Average Project KPIs
           </h2>
+          {projectKpis.hasError && (
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3">
+              Some KPI metrics could not be loaded. Showing the values that were
+              available; refresh the page to retry.
+            </p>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <KpiCard
               label="Average Progress"
-              value={`${PROJECT_KPIS.avgProgress}%`}
+              value={
+                projectKpis.loading
+                  ? '…'
+                  : projectKpis.avgProgress != null
+                    ? `${projectKpis.avgProgress.toFixed(0)}%`
+                    : '—'
+              }
               icon={ArrowTrendingUpIcon}
               tone="success"
             >
-              <ProgressBar value={PROJECT_KPIS.avgProgress} />
+              {projectKpis.avgProgress != null ? (
+                <ProgressBar value={projectKpis.avgProgress} />
+              ) : (
+                <p className="text-xs text-gray-500">
+                  No completed tasks reported by any sprint yet.
+                </p>
+              )}
             </KpiCard>
 
             <KpiCard
               label="Average Carryover Rate"
-              value={`${PROJECT_KPIS.carryRate}%`}
+              value={
+                projectKpis.loading
+                  ? '…'
+                  : projectKpis.carryRate != null
+                    ? `${projectKpis.carryRate.toFixed(0)}%`
+                    : '—'
+              }
               icon={ExclamationCircleIcon}
               tone="warning"
             >
               <p className="text-xs text-gray-500">
-                Average across {PROJECT_KPIS.sprintsCount} sprints
+                {projectKpis.sprintsCount > 0
+                  ? `Average across ${projectKpis.sprintsCount} ${
+                      projectKpis.sprintsCount === 1 ? 'sprint' : 'sprints'
+                    }`
+                  : 'No sprints recorded yet.'}
               </p>
             </KpiCard>
 
             <KpiCard
               label="Average Task Delay"
-              value={`${PROJECT_KPIS.taskDelay}%`}
+              value={
+                projectKpis.loading
+                  ? '…'
+                  : projectKpis.worstSprintRework != null
+                    ? `${projectKpis.worstSprintRework.toFixed(0)}%`
+                    : '—'
+              }
               icon={ExclamationCircleIcon}
               tone="danger"
             >
               <p className="text-xs text-gray-500">
-                {PROJECT_KPIS.delayedTasks} delayed tasks
+                {projectKpis.sprintsCount > 0
+                  ? `${projectKpis.delayedSprintsCount} of ${projectKpis.sprintsCount} ${
+                      projectKpis.sprintsCount === 1 ? 'sprint' : 'sprints'
+                    } had delays`
+                  : 'No sprints recorded yet.'}
               </p>
             </KpiCard>
 
             <KpiCard
               label="Average Cycle Time"
-              value={PROJECT_KPIS.cycleTime}
+              value={
+                avgCycleTimeDays == null
+                  ? '—'
+                  : `${avgCycleTimeDays.toFixed(1)} ${
+                      avgCycleTimeDays === 1 ? 'day' : 'days'
+                    }`
+              }
               icon={ClockIcon}
               tone="info"
             >
-              <Sparkline />
+              {avgCycleTimeDays != null ? (
+                <Sparkline />
+              ) : (
+                <p className="text-xs text-gray-500">
+                  Tracked once tasks have both a start and a real end date.
+                </p>
+              )}
             </KpiCard>
 
             <KpiCard
               label="Project Delay"
-              value={PROJECT_KPIS.projectDelay}
+              value={projectDelayInfo?.label ?? '—'}
               icon={CalendarDaysIcon}
-              tone="success"
+              tone={projectDelayInfo?.tone ?? 'info'}
             >
               <p className="text-xs text-gray-500">
-                Expected date: {PROJECT_KPIS.expectedDate}
+                {projectDelayInfo?.expectedDate
+                  ? `Expected date: ${projectDelayInfo.expectedDate}`
+                  : 'No planned end date set.'}
               </p>
             </KpiCard>
           </div>

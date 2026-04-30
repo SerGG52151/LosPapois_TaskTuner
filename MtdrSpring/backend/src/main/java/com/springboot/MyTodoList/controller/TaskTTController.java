@@ -21,6 +21,11 @@ public class TaskTTController {
         return taskTTService.findAll();
     }
 
+    @GetMapping(value = "/projects/{pjId}/tasks")
+    public List<TaskTT> getTasksByProject(@PathVariable long pjId) {
+        return taskTTService.getTasksByProject(pjId);
+    }
+
     @GetMapping(value = "/tasks/{id}")
     public ResponseEntity<TaskTT> getTaskById(@PathVariable long id){
         try{
@@ -44,11 +49,11 @@ public class TaskTTController {
         try{
             TaskTT updated = taskTTService.updateTask(id, task);
             if (updated == null) {
-                return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
             }
             return new ResponseEntity<>(updated, HttpStatus.OK);
         }catch (Exception e){
-            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 

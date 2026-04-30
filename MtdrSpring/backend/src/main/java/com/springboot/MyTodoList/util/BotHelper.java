@@ -8,6 +8,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRem
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardRow;
 
 public class BotHelper {
 
@@ -55,6 +57,19 @@ public class BotHelper {
 		} catch (Exception e) {
 			logger.error(e.getLocalizedMessage(), e);
 		}
+	}
+
+	// Para enviar mensajes de texto con botón Cancel inline
+	public static void sendPromptWithCancel(Long chatId, String text, TelegramClient bot) {
+		InlineKeyboardMarkup cancelKeyboard = InlineKeyboardMarkup.builder()
+			.keyboardRow(new InlineKeyboardRow(
+				InlineKeyboardButton.builder()
+					.text("❌ Cancel")
+					.callbackData("CANCEL")
+					.build()
+			))
+			.build();
+		sendMessageToTelegramButtons(chatId, text, bot, cancelKeyboard);
 	}
 
 	// Para enviar mensajes con botones
