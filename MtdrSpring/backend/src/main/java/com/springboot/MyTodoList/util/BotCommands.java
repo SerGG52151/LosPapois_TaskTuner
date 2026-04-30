@@ -18,7 +18,8 @@ public enum BotCommands {
 	ASK_COMMAND("/ask"),
 	ADD_FEATURE("/addfeature"),
 	EDIT_FEATURE("/editfeature"),
-	AI_CREATE("/aicreate");
+	AI_CREATE("/aicreate"),
+	IMPORT_TASKS("/importtasks");
 
 	private final String command;
 
