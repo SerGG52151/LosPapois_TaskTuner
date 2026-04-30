@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import HomePage from './Pages/HomePage';
+import ArchivedProjectsPage from './Pages/ArchivedProjectsPage';
 import TasksPage from './Pages/TasksPage';
 import LoginPage from './Pages/LoginPage';
 import SignupPage from './Pages/SignupPage';
@@ -11,6 +12,7 @@ import StatisticsPage from './Pages/StatisticsPage';
 import ProjectsPage from './Pages/ProjectsPage';
 import { Sidebar, SidebarToggle } from './Components/Sidebar';
 import PageBreadcrumb from './Components/Header/PageBreadcrumb';
+import HomeButton from './Components/Header/HomeButton';
 // Old top-bar Navigation kept importable in case we need to revert quickly,
 // but it is no longer rendered — Sidebar replaces it.
 // import Navigation from './Components/Navigation';
@@ -43,6 +45,8 @@ function App() {
       <Route path="/signup" element={<SignupPage />} />
       {/* Post-login landing — project selector cards. */}
       <Route path="/home" element={<HomePage />} />
+      {/* Read-only landing for finalized projects. */}
+      <Route path="/archive" element={<ArchivedProjectsPage />} />
       <Route path="/tasks" element={<TasksPage />} />
       <Route path="/projects" element={<ProjectsPage />} />
       {/* Team and Sprint are scoped to a project — the projectId / */}
@@ -71,6 +75,7 @@ function App() {
         {/* sidebar header so the two zones align cleanly at the corner. */}
         <header className="flex items-center gap-3 px-4 h-16 bg-white border-b-2 border-brand">
           <SidebarToggle isOpen={sidebarOpen} onToggle={toggleSidebar} />
+          <HomeButton />
           <PageBreadcrumb />
         </header>
         <main className="flex-1 overflow-auto">{routes}</main>

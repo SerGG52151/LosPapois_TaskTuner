@@ -86,4 +86,10 @@ export const STORAGE_KEYS = {
   CURRENT_SPRINT: 'task_tuner_current_sprint',
   AUTH_TOKEN: 'task_tuner_auth_token',
   SIDEBAR_OPEN: 'task_tuner_sidebar_open',
+  /**
+   * Per-project KPI cache prefix — paired with the projectId at runtime
+   * (e.g. `${PROJECT_KPIS}_${pjId}`) so each project keeps its own cached
+   * snapshot, just like the SPRINTS cache.
+   */
+  PROJECT_KPIS: 'task_tuner_project_kpis',
 } as const;

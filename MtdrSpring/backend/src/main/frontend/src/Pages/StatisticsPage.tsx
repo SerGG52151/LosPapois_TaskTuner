@@ -4,16 +4,20 @@ import {
   ArrowTrendingUpIcon,
   ChevronDownIcon,
   ChartBarIcon,
+  CheckBadgeIcon,
+  LockClosedIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import PageLoading from '../Components/Common/PageLoading';
+import CloseProjectModal from '../Components/Common/CloseProjectModal';
 import { SprintProgressPieChart, ProjectProgressBox } from '../Components/Sprint';
 import CycleTimeScatterPlot from '../Components/Charts/CycleTimeScatterPlot';
-import { getFromStorage, STORAGE_KEYS } from '../Utils/storage';
+import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../Utils/storage';
 
 interface ProjectDTO {
   pjId: number;
   namePj: string;
+  dateEndRealPj?: string | null;
 }
 
 interface MembershipDTO {
@@ -103,6 +107,60 @@ export default function StatisticsPage() {
       : undefined;
     return match?.namePj ?? projects[0]?.namePj ?? 'Project';
   }, [projectId]);
+
+  // Project lifecycle state — driven by dateEndRealPj. Seeded from cache so
+  // the badge can paint immediately, then refreshed from /api/projects.
+  const [closedDate, setClosedDate] = useState<string | null>(() => {
+    const projects = getFromStorage<ProjectDTO[]>(STORAGE_KEYS.PROJECTS) ?? [];
+    const match = projectId != null
+      ? projects.find(p => p.pjId === projectId)
+      : undefined;
+    return match?.dateEndRealPj ?? null;
+  });
+  const isProjectClosed = closedDate != null;
+  const [closeModalOpen, setCloseModalOpen] = useState<boolean>(false);
+
+  // Re-fetch the project list on mount to make sure the close-state badge
+  // reflects whatever state the backend has, not just what's in cache.
+  useEffect(() => {
+    if (projectId == null) return;
+    let cancelled = false;
+    fetch('/api/projects')
+      .then(r => (r.ok ? r.json() : null))
+      .then((data: ProjectDTO[] | null) => {
+        if (cancelled || !data) return;
+        saveToStorage(STORAGE_KEYS.PROJECTS, data);
+        const match = data.find(p => p.pjId === projectId);
+        setClosedDate(match?.dateEndRealPj ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  // After a successful close, refresh local state + cache so the badge
+  // flips immediately without a manual reload.
+  const handleProjectClosed = () => {
+    const today = new Date().toISOString();
+    setClosedDate(today);
+    const projects = getFromStorage<ProjectDTO[]>(STORAGE_KEYS.PROJECTS) ?? [];
+    const next = projects.map(p =>
+      p.pjId === projectId ? { ...p, dateEndRealPj: today } : p
+    );
+    saveToStorage(STORAGE_KEYS.PROJECTS, next);
+  };
+
+  const formattedClosedDate = useMemo(() => {
+    if (!closedDate) return null;
+    const d = new Date(closedDate);
+    if (Number.isNaN(d.getTime())) return closedDate;
+    return d.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  }, [closedDate]);
 
   const [members, setMembers] = useState<MemberOption[]>([]);
   const [sprints, setSprints] = useState<SprintDTO[]>([]);
@@ -747,6 +805,14 @@ export default function StatisticsPage() {
 
         <CycleTimeScatterPlot projectId={projectId} />
       </div>
+
+      <CloseProjectModal
+        isOpen={closeModalOpen}
+        projectId={projectId ?? null}
+        projectName={projectName}
+        onClose={() => setCloseModalOpen(false)}
+        onClosed={handleProjectClosed}
+      />
     </div>
   );
 }
