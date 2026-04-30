@@ -20,8 +20,16 @@ public class KpisService {
     public Map<String, Object> getProjectVelocityMetric(long pjId) {
         Object[] row = kpisRepository.getProjectVelocityMetric(pjId);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("finished_sprints", row[0]);
-        result.put("avg_velocity",     row[1]);
+        // The query aggregates over sprints with STATE_SPRINT='done'. When the
+        // project has no completed sprints yet, the result is either null or
+        // an array of nulls. 
+        if (row == null || row.length < 2) {
+            result.put("finished_sprints", 0);
+            result.put("avg_velocity",     null);
+        } else {
+            result.put("finished_sprints", row[0] != null ? row[0] : 0);
+            result.put("avg_velocity",     row[1]);
+        }
         return result;
     }
 
