@@ -39,6 +39,9 @@ public class FeatureTTService {
     }
 
     public FeatureTT addFeature(FeatureTT feature) {
+        if (feature.getSprId() == 0) {
+            throw new IllegalArgumentException("Feature must belong to a sprint (sprId is required).");
+        }
         return featureTTRepository.save(feature);
     }
 

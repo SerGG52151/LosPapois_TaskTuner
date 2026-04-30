@@ -17,6 +17,8 @@ import com.springboot.MyTodoList.repository.UserTTRepository;
 @Service
 public class UserTTService {
 
+    private static final int MIN_PASSWORD_LENGTH = 8;
+
     /*
      * Spring injects the UserTTRepository implementation at startup.
      * We never instantiate this manually — Spring's IoC container manages it.
@@ -50,7 +52,7 @@ public class UserTTService {
     /**
      * Returns all users with a specific role.
      *
-     * @param role  'manager' or 'developer'
+     * @param role 'manager' or 'developer'
      * @return list of matching users
      */
     public List<UserTT> getUsersByRole(String role) {
@@ -63,16 +65,27 @@ public class UserTTService {
 
     public Optional<UserTT> login(LoginRequest req) {
         return userTTRepository.findByMail(req.getMail())
-                .filter(u -> u.getPassword() != null && passwordEncoder.matches(req.getPassword(), u.getPassword()));
+            .filter(u ->
+                u.getPassword() != null
+                    && passwordEncoder.matches(req.getPassword(), u.getPassword())
+                    && "manager".equalsIgnoreCase(u.getRole()));
     }
 
 
     public UserTT register(RegisterRequest req) {
-        if (userTTRepository.findByMail(req.getMail()).isPresent()) {
-            throw new IllegalArgumentException("El correo ya está registrado.");
+        validatePassword(req.getPassword());
+
+        boolean emailExists = userTTRepository.existsByMailIgnoreCase(req.getMail());
+        boolean telegramExists = userTTRepository.existsByIdTelegramIgnoreCase(req.getIdTelegram());
+
+        if (emailExists && telegramExists) {
+            throw new IllegalArgumentException("Email and Telegram ID are already registered.");
         }
-        if (userTTRepository.findByIdTelegram(req.getIdTelegram()).isPresent()) {
-            throw new IllegalArgumentException("El ID de Telegram ya está registrado.");
+        if (emailExists) {
+            throw new IllegalArgumentException("Email is already registered.");
+        }
+        if (telegramExists) {
+            throw new IllegalArgumentException("Telegram ID is already registered.");
         }
 
         UserTT user = new UserTT();
@@ -81,7 +94,7 @@ public class UserTTService {
         // Hash the password using BCrypt before storing
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setIdTelegram(req.getIdTelegram());
-        user.setRole("developer");
+        user.setRole("manager");
         return userTTRepository.save(user);
     }
 
@@ -95,8 +108,15 @@ public class UserTTService {
             UserTT user = existing.get();
             // Only update fields the client is allowed to change:
             user.setNameUser(updatedUser.getNameUser());
-            // Hash the password if it's being updated
-            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+            // Hash + persist the password ONLY if the client provided one.
+            // Empty/null means "leave password as-is" — otherwise omitting
+            // the field from a profile-edit PUT would silently corrupt the
+            // user's stored hash and lock them out.
+            String newPassword = updatedUser.getPassword();
+            if (newPassword != null && !newPassword.trim().isEmpty()) {
+                validatePassword(newPassword);
+                user.setPassword(passwordEncoder.encode(newPassword));
+            }
             user.setIdTelegram(updatedUser.getIdTelegram());
             user.setMail(updatedUser.getMail());
             user.setRole(updatedUser.getRole());
@@ -115,5 +135,12 @@ public class UserTTService {
         }
     }
 
-    
+    private void validatePassword(String password) {
+        if (password == null || password.trim().isEmpty()) {
+            throw new IllegalArgumentException("Password is required.");
+        }
+        if (password.length() < MIN_PASSWORD_LENGTH) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long.");
+        }
+    }
 }

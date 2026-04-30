@@ -1,11 +1,18 @@
 package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.model.ProjectTT;
+import com.springboot.MyTodoList.model.ProjectUserTT;
+import com.springboot.MyTodoList.model.SprintTT;
+import com.springboot.MyTodoList.model.UserTT;
 import com.springboot.MyTodoList.repository.ProjectTTRepository;
+import com.springboot.MyTodoList.repository.ProjectUserTTRepository;
+import com.springboot.MyTodoList.repository.SprintTTRepository;
+import com.springboot.MyTodoList.repository.UserTTRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,6 +33,15 @@ public class ProjectTTService {
 
     @Autowired
     private ProjectTTRepository projectTTRepository;
+
+    @Autowired
+    private SprintTTRepository sprintTTRepository;
+
+    @Autowired
+    private ProjectUserTTRepository projectUserTTRepository;
+
+    @Autowired
+    private UserTTRepository userTTRepository;
 
     // ─── Read Operations ─────────────────────────────────────────────────
 
@@ -103,24 +119,44 @@ public class ProjectTTService {
     }
 
     /**
-     * Closes a project by recording today as the real end date.
+     * Closes a project and cascades the state change to all related data.
      *
-     * This is a dedicated operation so controllers don't need to
-     * fetch the full project just to set one field.
+     * Steps (all within one transaction):
+     *   1. Set date_end_real_pj = today on PROJECT_TT.
+     *   2. Mark every sprint of this project as 'done' in SPRINT_TT.
+     *   3. Remove all developer memberships from PROJECT_USER_TT
+     *      (manager memberships are preserved so they keep historical access).
      *
      * @param id  the pj_id of the project to close
      * @return the updated project, or null if not found
      */
+    @Transactional
     public ProjectTT closeProject(long id) {
         Optional<ProjectTT> existing = projectTTRepository.findById(id);
-        if (existing.isPresent()) {
-            ProjectTT project = existing.get();
-            // Record today's date as the actual project close date
-            project.setDateEndRealPj(LocalDate.now());
-            return projectTTRepository.save(project);
-        } else {
-            return null;
+        if (!existing.isPresent()) return null;
+
+        // 1. Record today as the actual close date
+        ProjectTT project = existing.get();
+        project.setDateEndRealPj(LocalDate.now());
+        projectTTRepository.save(project);
+
+        // 2. Mark all sprints of this project as done
+        List<SprintTT> sprints = sprintTTRepository.findByPjId(id);
+        for (SprintTT sprint : sprints) {
+            sprint.setStateSprint("done");
+            sprintTTRepository.save(sprint);
         }
+
+        // 3. Remove only developer members — managers keep access for history
+        List<ProjectUserTT> members = projectUserTTRepository.findByIdPjId(id);
+        for (ProjectUserTT membership : members) {
+            Optional<UserTT> userOpt = userTTRepository.findById(membership.getUserId());
+            if (userOpt.isPresent() && "developer".equals(userOpt.get().getRole())) {
+                projectUserTTRepository.deleteById(membership.getId());
+            }
+        }
+
+        return project;
     }
 
     /**

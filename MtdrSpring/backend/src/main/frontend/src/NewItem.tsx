@@ -25,7 +25,7 @@ export default function NewItem(props: NewItemProps) {
       <form>
         <input
           id="newiteminput"
-          placeholder="Nueva tarea"
+          placeholder="New task"
           type="text"
           autoComplete="off"
           value={item}
@@ -44,7 +44,7 @@ export default function NewItem(props: NewItemProps) {
           onClick={!props.isInserting ? handleSubmit : undefined}
           size="small"
         >
-          {props.isInserting ? 'Agregando…' : 'Agregar'}
+          {props.isInserting ? 'Adding…' : 'Add'}
         </Button>
       </form>
     </div>
